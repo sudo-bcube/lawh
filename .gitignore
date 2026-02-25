@@ -1,0 +1,6 @@
+# Zip files
+*.zip
+
+# Legacy directories
+/lawh-frontend
+/lawh-backend

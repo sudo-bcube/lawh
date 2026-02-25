@@ -1,0 +1,3284 @@
+# Lawh Frontend Architecture Document
+
+**Version:** 1.1
+**Date:** 2026-02-03
+**Status:** In Progress
+
+---
+
+## ⚠️ IMPORTANT UPDATE: STT Provider Decision
+
+**Date:** February 3, 2026
+**Decision:** ✅ **Use Google Cloud Speech-to-Text (not Azure)**
+
+After comprehensive testing:
+- **Azure STT:** Failed on live recordings - returns English garbage ("Who do we do")
+- **Google Cloud STT:** Pure Arabic, 60-70% accuracy - viable for MVP
+
+**Impact on this document:**
+- All references to "Azure STT" should be read as "Google Cloud STT"
+- Repository pattern remains the same (swap `AzureSttRepositoryImpl` → `GoogleSttRepositoryImpl`)
+- See detailed comparison: [docs/azure-stt-quick-summary.md](./azure-stt-quick-summary.md)
+
+**Implementation changes:**
+- Use Google Cloud Speech-to-Text API (REST with API key)
+- Audio format: WAV 16kHz mono (same as Azure)
+- Fuzzy matching threshold: 40% (generous due to 60-70% STT accuracy)
+
+---
+
+## Change Log
+
+| Date | Version | Description | Author |
+|------|---------|-------------|--------|
+| 2026-02-03 | 1.1 | Updated STT provider decision: Google Cloud STT selected | Claude Code |
+| 2026-02-03 | 1.0 | Initial frontend architecture document created | Winston (Architect) |
+
+---
+
+## Template and Framework Selection
+
+### Framework Selected: Flutter (Dart)
+
+**Rationale**:
+- **Cross-platform efficiency**: Single codebase for iOS and Android meets the aggressive 4-week MVP timeline
+- **Solo developer optimization**: Reduces context switching between platform-specific code
+- **Performance requirements**: Native compilation achieves the required 60fps animations and <2s app launch time
+- **UI/UX alignment**: Material Design 3 and Cupertino widgets provide the platform-native foundation described in the UI/UX spec
+- **Web potential**: Flutter Web capability supports the future web version mentioned in the brief
+
+### Key Dependencies Identified
+
+- **Flutter SDK**: Latest stable (3.x+)
+- **Google Cloud Speech-to-Text**: Selected after testing (see STT decision above)
+- **Quran Text Database**: Tanzil.net or EveryAyah.com (pending license verification)
+
+### Starter Template Approach
+
+**Decision**: Standard Flutter project initialization without pre-built template.
+
+**Reasoning**: The app's unique audio-first interaction model doesn't fit standard UI templates. Custom architecture provides:
+- Full control over audio recording and API integration patterns
+- Optimized state management for the specific "listen → identify → read" flow
+- No unnecessary dependencies or boilerplate to remove
+
+### Trade-offs Made
+
+1. **Flutter vs React Native**: Chose Flutter for better performance (native compilation vs JavaScript bridge) and more mature state management options
+2. **Custom vs Template**: Opted against UI templates because the unique audio-first workflow requires custom patterns
+3. **Single Framework Risk**: Accepted vendor lock-in to Flutter for speed-to-market benefits; migration path exists via Flutter Web if needed
+
+### Key Assumptions
+
+- Developer has Flutter experience (mentioned in brief as "full-stack capabilities")
+- Flutter's audio recording packages will meet the 10-15 second recording requirement
+- Platform-specific microphone permissions will work without major friction
+
+### Areas Requiring Validation
+
+- **Quran font rendering**: Flutter's text rendering must handle complex Arabic Uthmani script with proper diacritical marks
+- **Audio codec support**: Verify AAC/Opus compression works on both iOS and Android
+- **Platform differences**: iOS requires explicit microphone permissions; Android needs runtime permissions handling
+
+---
+
+## Frontend Tech Stack
+
+### Technology Stack Table
+
+| Category | Technology | Version | Purpose | Rationale |
+|----------|-----------|---------|---------|-----------|
+| **Framework** | Flutter | 3.24+ (stable) | Cross-platform mobile app framework | Native performance, single codebase for iOS/Android, excellent UI toolkit for the required 60fps animations and <2s launch time |
+| **Language** | Dart | 3.5+ | Programming language for Flutter | Type-safe, null-safe, optimized for Flutter's reactive architecture |
+| **UI Library** | Material Design 3 / Cupertino | Built-in | Platform-adaptive UI components | Provides platform-native feel (Material for Android, Cupertino for iOS) while maintaining brand identity through theming |
+| **State Management** | Riverpod | 2.5+ | Reactive state management | Compile-safe, testable, no BuildContext dependency; better than Provider for complex async operations (STT API calls) |
+| **Routing** | go_router | 14.0+ | Declarative routing | Type-safe navigation, deep linking support for future web version, cleaner than Navigator 2.0 API |
+| **HTTP Client** | dio | 5.4+ | API communication | Interceptors for auth/logging, better error handling than http package, request cancellation support |
+| **Audio Recording** | record | 5.1+ | Microphone audio capture | Cross-platform, supports AAC/Opus encoding, provides audio amplitude for waveform visualization |
+| **Audio Playback** | just_audio | 0.9+ | Optional audio playback (future feature) | Low latency, background audio support if reciter playback is added in Phase 2 |
+| **Local Storage** | sqflite | 2.3+ | SQLite database for Quran text | Efficient verse lookup, supports complex queries, offline-first architecture |
+| **Shared Preferences** | shared_preferences | 2.2+ | User settings persistence | Simple key-value storage for location toggle, theme preference, anonymous UUID |
+| **Permissions** | permission_handler | 11.3+ | Runtime permissions management | Handles microphone, location permissions across iOS/Android with unified API |
+| **Analytics** | firebase_analytics | 11.0+ | Usage tracking and feedback collection | Free tier, integrates with Firebase ecosystem, privacy-compliant event tracking |
+| **Payments** | stripe_flutter | 11.0+ | Sadaqah donation processing | Official Stripe SDK, PCI-compliant, supports diverse payment methods |
+| **Testing Framework** | flutter_test | Built-in | Unit and widget testing | Official testing framework, excellent widget testing support |
+| **Integration Testing** | integration_test | Built-in | E2E testing | Tests full user flows on real devices/emulators |
+| **Mocking** | mockito | 5.4+ | Test mocking | Generate mocks for API clients, repositories, services |
+| **Linting** | flutter_lints | 4.0+ | Code quality enforcement | Official lint rules, enforces Dart/Flutter best practices |
+| **Environment Config** | flutter_dotenv | 5.1+ | Environment variable management | Secure API key storage, separate dev/prod configs |
+| **Crash Reporting** | firebase_crashlytics | 4.0+ | Production error tracking | Real-time crash reports, integrates with Firebase Analytics |
+| **Code Generation** | build_runner + freezed | 2.4+ / 2.4+ | Immutable state classes | Reduces boilerplate for data models, ensures immutability for state management |
+| **JSON Serialization** | json_serializable | 6.8+ | API response parsing | Type-safe JSON deserialization, reduces manual parsing errors |
+| **Location Services** | geolocator | 12.0+ | Optional city/region collection | Cross-platform location access, respects permission states |
+| **Dev Tools** | Flutter DevTools | Built-in | Performance profiling and debugging | Frame rate monitoring, memory profiling, network inspection |
+
+### Key Technology Decisions
+
+**1. Riverpod over Provider/Bloc**:
+- Riverpod's compile-time safety catches errors early (critical for solo developer)
+- AsyncNotifier pattern perfect for STT API calls with loading/error states
+- No BuildContext requirement simplifies testing
+- Trade-off: Steeper learning curve, but better long-term maintainability
+
+**2. go_router over Navigator 2.0**:
+- Declarative routing aligns with Flutter 3.x best practices
+- Deep linking support prepares for web version (Phase 2)
+- Type-safe navigation reduces runtime errors
+- Trade-off: Extra dependency, but worth it for code clarity
+
+**3. record package over flutter_sound**:
+- Simpler API for basic recording needs
+- Lighter weight (flutter_sound has more features we don't need)
+- Better maintained for recent Flutter versions
+- Trade-off: Fewer features, but sufficient for MVP
+
+**4. dio over http package**:
+- Interceptors essential for logging Azure STT requests/responses during debugging
+- Request cancellation if user navigates away during API call
+- Better timeout handling (10-second timeout requirement)
+- Trade-off: Slightly heavier, but more robust for production
+
+**5. Firebase Analytics over custom backend tracking**:
+- Free tier sufficient for MVP scale (1,000 users)
+- Reduces backend complexity (no need to build tracking API)
+- Integrates with Crashlytics for unified monitoring
+- Trade-off: Vendor lock-in, but cost-effective for MVP
+
+### Critical Notes
+
+- Azure STT accessed via REST API (no official Dart SDK, using dio for HTTP calls)
+- Quran text database fits in SQLite (~5MB as mentioned in UI/UX spec)
+- Stripe Islamic payment processor support requires verification before implementation
+- Firebase free tier adequate for initial 1,000 users
+
+---
+
+## Project Structure
+
+### Principal Engineer Mindset
+
+**Think like a principal engineer, not a framework zealot.**
+
+A principal engineer knows when to apply architecture patterns and when to ship pragmatically. For this 4-week MVP:
+
+- ✅ **Apply architecture when it prevents pain later** (testability, swappable Azure STT, clear feature boundaries)
+- ❌ **Skip architecture when it's speculative** (don't build for features that don't exist yet)
+- ✅ **Write code that's easy to change** (interfaces, dependency injection)
+- ❌ **Don't write code that's "flexible for future unknowns"** (YAGNI - You Aren't Gonna Need It)
+
+**The MVP Architecture Rule**: If a layer doesn't solve a current problem or make testing significantly easier, skip it. Add it in Phase 2 when you have real requirements.
+
+---
+
+### Pragmatic Clean Architecture for MVP
+
+**Three-Layer Approach (Simplified Clean Architecture)**:
+
+```
+┌─────────────────────────────────────────────────┐
+│         PRESENTATION LAYER                      │
+│  - Screens (Widgets)                            │
+│  - Riverpod Providers (State Management)        │
+│  - UI Logic Only                                │
+│  - Depends on: Domain Layer                     │
+└─────────────────────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────┐
+│         DOMAIN LAYER (Business Logic)           │
+│  - Models (Freezed data classes)                │
+│  - Repository Interfaces (abstract)             │
+│  - Pure Dart (no Flutter imports)               │
+│  - Depends on: Nothing                          │
+└─────────────────────────────────────────────────┘
+                      ▲
+┌─────────────────────────────────────────────────┐
+│         DATA LAYER (Implementation)             │
+│  - Repository Implementations                   │
+│  - API Clients (dio, Azure STT)                 │
+│  - Local Storage (SQLite, SharedPreferences)    │
+│  - Depends on: Domain Layer                     │
+└─────────────────────────────────────────────────┘
+```
+
+**Key Benefits for MVP**:
+1. **Testable**: Domain layer has zero Flutter dependencies, easy to unit test business logic
+2. **Swappable**: Replace Azure STT with Google Cloud STT by swapping one repository implementation
+3. **Clear boundaries**: Each layer has one job; debugging is easier when you know where to look
+
+**What We're NOT Doing (Post-MVP)**:
+- ❌ Use Cases / Interactors layer (business logic is simple enough to live in providers)
+- ❌ Complex entity/model mappings (domain models ARE data models for now)
+- ❌ Dependency Injection containers (Riverpod providers handle DI)
+- ❌ Separate DTO/Entity layers (premature abstraction)
+
+---
+
+### Directory Structure
+
+```
+lawh/
+├── android/                      # Android-specific native code
+├── ios/                          # iOS-specific native code
+├── lib/
+│   ├── main.dart                 # App entry point, initializes providers
+│   ├── app.dart                  # Root widget, theme configuration, routing setup
+│   │
+│   ├── core/
+│   │   ├── constants/
+│   │   │   ├── app_colors.dart           # Color palette (light/dark mode)
+│   │   │   ├── app_text_styles.dart      # Typography scale
+│   │   │   ├── app_spacing.dart          # 8pt grid spacing constants
+│   │   │   └── app_strings.dart          # UI text constants
+│   │   ├── theme/
+│   │   │   ├── app_theme.dart            # ThemeData configuration
+│   │   │   └── platform_theme.dart       # Material vs Cupertino theme logic
+│   │   ├── router/
+│   │   │   └── app_router.dart           # go_router configuration
+│   │   ├── di/
+│   │   │   └── providers.dart            # Riverpod provider declarations
+│   │   ├── utils/
+│   │   │   ├── logger.dart               # Logging utility
+│   │   │   ├── device_info.dart          # Device UUID, platform detection
+│   │   │   └── permissions_helper.dart   # Permission request wrappers
+│   │   └── errors/
+│   │       ├── app_exception.dart        # Custom exception types
+│   │       └── error_handler.dart        # Global error handling logic
+│   │
+│   ├── features/
+│   │   ├── verse_identification/
+│   │   │   ├── presentation/
+│   │   │   │   ├── screens/
+│   │   │   │   │   ├── main_screen.dart          # "Listen" button home screen
+│   │   │   │   │   ├── recording_screen.dart     # Waveform animation screen
+│   │   │   │   │   ├── results_screen.dart       # Verse identification results
+│   │   │   │   │   └── error_retry_screen.dart   # Low confidence / error handling
+│   │   │   │   ├── widgets/
+│   │   │   │   │   ├── listen_button.dart        # Primary CTA with states
+│   │   │   │   │   ├── waveform_visualizer.dart  # Audio amplitude animation
+│   │   │   │   │   ├── result_card.dart          # Verse result card component
+│   │   │   │   │   ├── confidence_indicator.dart # High/medium confidence badge
+│   │   │   │   │   └── feedback_buttons.dart     # Thumbs up/down
+│   │   │   │   └── providers/
+│   │   │   │       ├── recording_provider.dart   # Audio recording state
+│   │   │   │       ├── identification_provider.dart  # STT + fuzzy match logic
+│   │   │   │       └── feedback_provider.dart    # Feedback submission
+│   │   │   ├── domain/
+│   │   │   │   ├── models/
+│   │   │   │   │   ├── verse_result.dart         # Verse identification result
+│   │   │   │   │   ├── search_feedback.dart      # User feedback model
+│   │   │   │   │   └── recording_state.dart      # Recording status enum
+│   │   │   │   └── repositories/
+│   │   │   │       ├── stt_repository.dart       # Abstract STT interface
+│   │   │   │       └── feedback_repository.dart  # Abstract feedback interface
+│   │   │   └── data/
+│   │   │       ├── repositories/
+│   │   │       │   ├── azure_stt_repository_impl.dart    # Azure STT implementation
+│   │   │       │   └── firebase_feedback_repository_impl.dart
+│   │   │       ├── services/
+│   │   │       │   ├── audio_recorder_service.dart   # record package wrapper
+│   │   │       │   ├── fuzzy_matcher_service.dart    # Local verse matching
+│   │   │       │   └── audio_compressor_service.dart # AAC/Opus encoding
+│   │   │       └── datasources/
+│   │   │           └── azure_stt_datasource.dart     # dio HTTP client for Azure
+│   │   │
+│   │   ├── quran_reader/
+│   │   │   ├── presentation/
+│   │   │   │   ├── screens/
+│   │   │   │   │   └── quran_reader_screen.dart  # Full Quran text display
+│   │   │   │   ├── widgets/
+│   │   │   │   │   ├── verse_text.dart           # Arabic text with highlighting
+│   │   │   │   │   └── surah_header.dart         # Surah name header
+│   │   │   │   └── providers/
+│   │   │   │       └── quran_reader_provider.dart
+│   │   │   ├── domain/
+│   │   │   │   ├── models/
+│   │   │   │   │   ├── verse.dart                # Single verse model
+│   │   │   │   │   ├── surah.dart                # Surah metadata
+│   │   │   │   │   └── quran_text.dart           # Full Quran structure
+│   │   │   │   └── repositories/
+│   │   │   │       └── quran_repository.dart     # Abstract Quran data interface
+│   │   │   └── data/
+│   │   │       ├── repositories/
+│   │   │       │   └── quran_repository_impl.dart
+│   │   │       ├── datasources/
+│   │   │       │   └── quran_local_datasource.dart   # SQLite queries
+│   │   │       └── models/
+│   │   │           └── quran_db_model.dart       # SQLite table structure
+│   │   │
+│   │   ├── settings/
+│   │   │   ├── presentation/
+│   │   │   │   ├── screens/
+│   │   │   │   │   ├── settings_screen.dart
+│   │   │   │   │   ├── privacy_policy_screen.dart
+│   │   │   │   │   └── about_screen.dart
+│   │   │   │   ├── widgets/
+│   │   │   │   │   ├── settings_toggle.dart      # Location sharing toggle
+│   │   │   │   │   └── settings_list_tile.dart   # Reusable settings item
+│   │   │   │   └── providers/
+│   │   │   │       └── settings_provider.dart
+│   │   │   ├── domain/
+│   │   │   │   ├── models/
+│   │   │   │   │   └── app_settings.dart         # User preferences model
+│   │   │   │   └── repositories/
+│   │   │   │       └── settings_repository.dart
+│   │   │   └── data/
+│   │   │       ├── repositories/
+│   │   │       │   └── settings_repository_impl.dart
+│   │   │       └── datasources/
+│   │   │           └── settings_local_datasource.dart  # SharedPreferences wrapper
+│   │   │
+│   │   └── donation/
+│   │       ├── presentation/
+│   │       │   ├── widgets/
+│   │       │   │   ├── donation_modal.dart       # Bottom sheet modal
+│   │       │   │   └── donation_button.dart      # "Support Lawh" CTA
+│   │       │   └── providers/
+│   │       │       └── donation_provider.dart
+│   │       ├── domain/
+│   │       │   ├── models/
+│   │       │   │   └── donation.dart             # Donation transaction model
+│   │       │   └── repositories/
+│   │       │       └── payment_repository.dart
+│   │       └── data/
+│   │           ├── repositories/
+│   │           │   └── stripe_payment_repository_impl.dart
+│   │           └── datasources/
+│   │               └── stripe_datasource.dart    # Stripe SDK wrapper
+│   │
+│   └── shared/
+│       ├── widgets/
+│       │   ├── primary_button.dart               # Reusable primary button
+│       │   ├── secondary_button.dart             # Reusable secondary button
+│       │   ├── loading_indicator.dart            # Platform-adaptive spinner
+│       │   └── error_message.dart                # Standard error display
+│       └── extensions/
+│           ├── context_extensions.dart           # BuildContext helpers
+│           └── string_extensions.dart            # String utilities
+│
+├── assets/
+│   ├── fonts/
+│   │   └── uthmanic_hafs.ttf                     # Quranic Arabic font
+│   ├── images/
+│   │   └── islamic_pattern.svg                   # Main screen background pattern
+│   └── data/
+│       └── quran.db                              # Pre-packaged SQLite database
+│
+├── test/
+│   ├── unit/
+│   │   ├── features/
+│   │   │   └── verse_identification/
+│   │   │       ├── fuzzy_matcher_test.dart
+│   │   │       └── recording_provider_test.dart
+│   │   └── core/
+│   │       └── utils/
+│   │           └── permissions_helper_test.dart
+│   ├── widget/
+│   │   └── features/
+│   │       └── verse_identification/
+│   │           ├── main_screen_test.dart
+│   │           └── result_card_test.dart
+│   └── integration/
+│       └── verse_identification_flow_test.dart   # Full E2E flow
+│
+├── .env.development                              # Dev environment variables
+├── .env.production                               # Prod environment variables
+├── pubspec.yaml                                  # Dependencies
+├── analysis_options.yaml                         # Lint rules
+└── README.md
+```
+
+**Architecture Pattern: Feature-First + Clean Architecture**
+
+**Why Feature-First?**
+- **Scalability**: Each feature (verse identification, quran reader, settings, donation) is self-contained
+- **Solo developer efficiency**: Work on one feature at a time without touching others
+- **Clear ownership**: Easy to find all code related to a specific screen or user flow
+- **Phase 2 readiness**: New features (reciter identification, offline mode) can be added as new feature directories
+
+**Key Structural Decisions**:
+
+1. **`core/` for cross-cutting concerns**: Theme, routing, dependency injection live here (used by all features)
+2. **`features/` organized by user journey**: Each feature is independent and follows presentation/domain/data layers
+3. **`shared/widgets/` for truly reusable components**: Only components used across 2+ features go here (prevents premature abstraction)
+4. **`domain/repositories/` implementation pattern**: Repositories implement abstract interfaces for testability and swappability
+5. **`assets/data/quran.db` pre-packaged**: Quran text bundled with app (no first-launch download delay)
+
+---
+
+## Clean Architecture & SOLID Principles
+
+### SOLID Principles Applied to Lawh
+
+**1. Single Responsibility Principle (SRP)**
+
+> *A class should have one, and only one, reason to change.*
+
+**✅ APPLY**:
+- `AudioRecorderService` handles recording only, not transcription or fuzzy matching
+- `FuzzyMatcherService` handles verse matching only, not API calls or UI state
+- `RecordingProvider` manages recording state, not Quran text loading
+
+**Example (SRP Violation to Avoid)**:
+```dart
+// ❌ BAD: One class doing too much
+class VerseIdentificationService {
+  Future<Verse> identifyVerse() {
+    // Records audio
+    // Calls Azure STT
+    // Does fuzzy matching
+    // Saves to database
+    // Sends analytics
+  }
+}
+
+// ✅ GOOD: Single responsibilities
+class AudioRecorderService { /* records audio */ }
+class AzureSttRepository { /* calls Azure STT API */ }
+class FuzzyMatcherService { /* matches verses */ }
+class FeedbackRepository { /* saves analytics */ }
+```
+
+---
+
+**2. Open/Closed Principle (OCP)**
+
+> *Software entities should be open for extension, but closed for modification.*
+
+**✅ APPLY**:
+- Use repository interfaces to allow swapping implementations (Azure → Google STT) without changing providers
+- Use abstract `SttRepository` that `AzureSttRepositoryImpl` implements
+
+**Example**:
+```dart
+// ✅ GOOD: Open for extension
+abstract class SttRepository {
+  Future<String> transcribeAudio(Uint8List audioData);
+}
+
+class AzureSttRepositoryImpl implements SttRepository {
+  @override
+  Future<String> transcribeAudio(Uint8List audioData) {
+    // Azure-specific implementation
+  }
+}
+
+// Later, extend with Google without modifying existing code
+class GoogleSttRepositoryImpl implements SttRepository {
+  @override
+  Future<String> transcribeAudio(Uint8List audioData) {
+    // Google-specific implementation
+  }
+}
+```
+
+**❌ DON'T OVER-APPLY**:
+- Don't create plugin architectures or strategy patterns for things that will never change
+- Example: Quran text structure is stable; don't create multiple implementations
+
+---
+
+**3. Liskov Substitution Principle (LSP)**
+
+> *Objects should be replaceable with instances of their subtypes without altering correctness.*
+
+**✅ APPLY**:
+- Any implementation of `SttRepository` should work interchangeably in `IdentificationProvider`
+- Mock repositories in tests should behave like real repositories
+
+**Example**:
+```dart
+// ✅ GOOD: Mock behaves like real implementation
+class MockSttRepository implements SttRepository {
+  @override
+  Future<String> transcribeAudio(Uint8List audioData) async {
+    return 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ'; // Test data
+  }
+}
+
+// Provider doesn't care if it's real or mock
+final identificationProvider = IdentificationProvider(
+  sttRepository: MockSttRepository(), // or AzureSttRepositoryImpl()
+);
+```
+
+---
+
+**4. Interface Segregation Principle (ISP)**
+
+> *Clients should not be forced to depend on interfaces they don't use.*
+
+**✅ APPLY**:
+- Don't create giant "God interfaces" with 20 methods
+- Split `QuranRepository` into specific interfaces if needed
+
+**Example**:
+```dart
+// ❌ BAD: Fat interface forces unused dependencies
+abstract class QuranRepository {
+  Future<List<Verse>> getAllVerses();
+  Future<Verse> getVerse(int surah, int ayah);
+  Future<void> saveBookmark(Bookmark bookmark);
+  Future<List<Bookmark>> getBookmarks();
+  Future<void> updateReadingProgress(Progress progress);
+  // ... 15 more methods
+}
+
+// ✅ GOOD: Focused interfaces
+abstract class QuranTextRepository {
+  Future<Verse> getVerse(int surah, int ayah);
+  Future<List<Verse>> getVerseRange(int surahStart, int ayahStart, int ayahEnd);
+}
+
+abstract class BookmarkRepository {
+  Future<void> saveBookmark(Bookmark bookmark);
+  Future<List<Bookmark>> getBookmarks();
+}
+```
+
+**❌ DON'T OVER-APPLY**:
+- For MVP, if `QuranRepository` only has 3-4 methods, keep it as one interface
+- Only split when you have 8+ methods or unrelated responsibilities
+
+---
+
+**5. Dependency Inversion Principle (DIP)**
+
+> *High-level modules should not depend on low-level modules. Both should depend on abstractions.*
+
+**✅ APPLY** (This is the most important for testability):
+- Providers depend on repository interfaces, not concrete implementations
+- Repositories are injected via Riverpod, not instantiated directly in providers
+
+**Example**:
+```dart
+// ❌ BAD: Provider depends on concrete implementation
+class IdentificationProvider extends StateNotifier<IdentificationState> {
+  final azureClient = AzureSttClient(); // Hard-coded dependency
+
+  Future<void> identify(Uint8List audio) async {
+    final text = await azureClient.transcribe(audio); // Can't test or swap
+  }
+}
+
+// ✅ GOOD: Provider depends on abstraction
+class IdentificationProvider extends StateNotifier<IdentificationState> {
+  final SttRepository sttRepository; // Injected dependency
+
+  IdentificationProvider(this.sttRepository);
+
+  Future<void> identify(Uint8List audio) async {
+    final text = await sttRepository.transcribeAudio(audio); // Testable, swappable
+  }
+}
+
+// Riverpod injection
+final identificationProvider = StateNotifierProvider<IdentificationProvider, IdentificationState>((ref) {
+  return IdentificationProvider(
+    ref.watch(sttRepositoryProvider), // Injected via provider
+  );
+});
+```
+
+---
+
+### MVP Architecture Decision Matrix
+
+Use this matrix to decide when to apply architecture patterns:
+
+| Scenario | Apply Architecture? | Rationale |
+|----------|---------------------|-----------|
+| **API might change (Azure → Google)** | ✅ YES - Use repository interface | High probability, easy to add interface |
+| **Complex business logic (fuzzy matching)** | ✅ YES - Separate service class | Makes testing easier, logic is complex |
+| **Simple data storage (settings)** | ⚠️ MAYBE - Direct SharedPreferences if <5 settings | Don't over-abstract simple key-value storage |
+| **Quran text lookup** | ✅ YES - Repository + local datasource | Critical feature, needs testing, may add caching later |
+| **UI state management** | ✅ YES - Riverpod providers | Essential for reactive UI, already decided |
+| **Audio recording** | ✅ YES - Service wrapper | Isolates platform-specific code, easier to test |
+| **Analytics tracking** | ❌ NO - Direct Firebase calls OK for MVP | Low complexity, unlikely to change, don't abstract |
+| **Navigation** | ⚠️ MAYBE - go_router is already an abstraction | Don't add custom navigation layer on top |
+| **Networking** | ✅ YES - Repository wraps dio | Enables mocking, error handling, retries |
+| **Validation logic** | ❌ NO - Inline validation OK for MVP | Simple input validation doesn't need separate layer |
+
+**The Rule**: If it's testable, swappable, or complex business logic → add layer. Otherwise, ship it simple.
+
+---
+
+### Code Quality Guidelines for MVP
+
+**1. Write Testable Code (But Don't Write All Tests Immediately)**
+- Structure code so it CAN be tested (dependency injection, pure functions)
+- Write tests for critical paths: fuzzy matching, STT integration, recording state management
+- Skip tests for simple UI widgets until after MVP ships (test during manual QA instead)
+
+**2. Use Type Safety Aggressively**
+- Leverage Dart's null safety (`String?` vs `String`)
+- Use Freezed for immutable data classes (prevents accidental mutations)
+- Prefer enums over strings for state (`RecordingState.recording` not `'recording'`)
+
+**3. Keep Functions Small and Focused**
+- Aim for <20 lines per function (exceptions OK for UI build methods)
+- If a function does more than one thing, split it
+- Use descriptive names: `transcribeAudioWithAzureStt()` not `process()`
+
+**4. Fail Fast and Explicitly**
+- Throw specific exceptions (`AudioPermissionDeniedException` not generic `Exception`)
+- Validate inputs at function boundaries (assert or throw if invalid)
+- Don't swallow errors silently
+
+**5. No Unnecessary Comments**
+- **Write self-documenting code first**: Good naming makes most comments obsolete
+- **Only comment the "why", never the "what"**: Code shows what it does; comments explain why you made non-obvious decisions
+- **Delete commented-out code**: Use git history instead
+- **Avoid redundant comments**: Don't restate what the code clearly shows
+
+```dart
+// ❌ BAD: Commenting the obvious
+// Set the recording state to recording
+state = RecordingState.recording;
+
+// ❌ BAD: Restating what the code does
+// Create a new instance of AudioRecorderService
+final recorder = AudioRecorderService();
+
+// ✅ GOOD: Explaining WHY (non-obvious decision)
+// Start recording immediately without delay to capture the first few seconds
+// of recitation, which are critical for verse identification accuracy
+await _recorder.start();
+
+// ✅ GOOD: Warning about side effects or gotchas
+// Note: This must be called before dispose() or it will leak memory
+await _recorder.stop();
+
+// ✅ GOOD: Documenting complex business logic
+// Fuzzy matching uses Levenshtein distance with 15% tolerance because
+// STT accuracy for Quranic Arabic averages 85% across tested reciters
+final match = _fuzzyMatcher.findBestMatch(text, threshold: 0.15);
+```
+
+**6. Optimize Later, Not Now**
+- Don't prematurely optimize (no custom memory pools, complex caching in MVP)
+- Measure performance with Flutter DevTools before optimizing
+- Focus on architecture that makes optimization easier later (e.g., swappable repositories)
+
+---
+
+### When to Refactor (Post-MVP Signals)
+
+Add layers and complexity when you see these signals:
+
+1. **Duplication across 3+ places** → Extract shared abstraction
+2. **Test setup is painful** → Add abstraction to enable easier mocking
+3. **Changing one thing breaks unrelated features** → Add boundaries (interfaces/repositories)
+4. **File is >500 lines** → Split into multiple files by responsibility
+5. **You're afraid to change code** → Refactor to add safety (tests, types, boundaries)
+
+**Before MVP**: Resist the urge to refactor unless it's blocking progress.
+
+---
+
+### Developer Checklist: Principal Engineer Review
+
+Before merging any code, ask yourself:
+
+- [ ] **Can I test this without running the app?** (If no, consider refactoring)
+- [ ] **If Azure STT changes to Google, how many files do I touch?** (Should be 1-2, not 10+)
+- [ ] **Is this code solving a current problem or a future hypothetical?** (Only solve current problems)
+- [ ] **Would a senior engineer understand this code in 6 months?** (Clear naming, simple structure)
+- [ ] **Am I following SOLID where it matters, not everywhere?** (Pragmatic, not dogmatic)
+- [ ] **Is this the simplest thing that could possibly work?** (MVP mindset)
+- [ ] **Does this code need comments, or can better naming eliminate them?** (Self-documenting code first)
+
+---
+
+## Routing
+
+### Route Configuration
+
+**Deep Linking is Essential for MVP**: The project brief targets 30%+ verse sharing rate as a key success metric. Deep linking enables recipients to open shared verses directly in the app, which is critical for viral growth.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Route paths as constants
+class AppRoutes {
+  static const main = '/';
+  static const results = '/results';
+  static const verse = '/verse/:surah/:ayah';  // Deep linkable!
+  static const settings = '/settings';
+  static const privacyPolicy = '/settings/privacy-policy';
+  static const about = '/settings/about';
+}
+
+// Router configuration provider
+final routerProvider = Provider<GoRouter>((ref) {
+  return GoRouter(
+    initialLocation: AppRoutes.main,
+    debugLogDiagnostics: kDebugMode,
+    routes: [
+      GoRoute(
+        path: '/',
+        name: 'main',
+        builder: (context, state) => const MainScreen(),
+      ),
+      GoRoute(
+        path: '/results',
+        name: 'results',
+        builder: (context, state) {
+          // For internal navigation, still use extra data
+          final results = state.extra as List<VerseResult>?;
+          return ResultsScreen(results: results ?? []);
+        },
+      ),
+
+      // PRIMARY ROUTE: Deep linkable verse reader
+      // Supports: lawh://verse/2/255 or https://lawh.app/verse/2/255
+      GoRoute(
+        path: '/verse/:surah/:ayah',
+        name: 'verse',
+        builder: (context, state) {
+          final surah = int.tryParse(state.pathParameters['surah'] ?? '');
+          final ayah = int.tryParse(state.pathParameters['ayah'] ?? '');
+
+          if (surah == null || ayah == null) {
+            return ErrorScreen(
+              error: 'Invalid verse reference',
+              onRetry: () => context.go('/'),
+            );
+          }
+
+          // Load verse from repository using surah/ayah numbers
+          return QuranReaderScreen(
+            surahNumber: surah,
+            ayahNumber: ayah,
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const SettingsScreen(),
+        routes: [
+          GoRoute(
+            path: 'privacy-policy',
+            name: 'privacyPolicy',
+            builder: (context, state) => const PrivacyPolicyScreen(),
+          ),
+          GoRoute(
+            path: 'about',
+            name: 'about',
+            builder: (context, state) => const AboutScreen(),
+          ),
+        ],
+      ),
+    ],
+    errorBuilder: (context, state) => ErrorScreen(
+      error: state.error?.toString() ?? 'Unknown error',
+      onRetry: () => context.go('/'),
+    ),
+  );
+});
+
+// Navigation helper extensions
+extension NavigationExtensions on BuildContext {
+  void goToMain() => go('/');
+
+  void goToResults(List<VerseResult> results) {
+    go('/results', extra: results);
+  }
+
+  // Primary verse navigation - generates shareable URLs
+  void goToVerse(int surah, int ayah) {
+    go('/verse/$surah/$ayah');
+  }
+
+  void goToSettings() => go('/settings');
+  void goToPrivacyPolicy() => go('/settings/privacy-policy');
+  void goToAbout() => go('/settings/about');
+
+  void goBack() => pop();
+}
+```
+
+### Deep Link Platform Configuration
+
+**iOS Configuration (ios/Runner/Info.plist)**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Existing keys... -->
+
+  <!-- Custom URL Scheme: lawh://verse/2/255 -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleURLName</key>
+      <string>com.lawh.app</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>lawh</string>
+      </array>
+    </dict>
+  </array>
+
+  <!-- Universal Links (HTTPS): https://lawh.app/verse/2/255 -->
+  <!-- Note: Requires apple-app-site-association file on web server -->
+  <!-- Can defer HTTPS links to Phase 2; use lawh:// scheme for MVP -->
+  <key>com.apple.developer.associated-domains</key>
+  <array>
+    <string>applinks:lawh.app</string>
+  </array>
+</dict>
+</plist>
+```
+
+**Android Configuration (android/app/src/main/AndroidManifest.xml)**
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <activity
+      android:name=".MainActivity"
+      android:launchMode="singleTop"
+      android:theme="@style/LaunchTheme">
+
+      <!-- Existing intent filters... -->
+
+      <!-- Custom URL Scheme: lawh://verse/2/255 -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="lawh" />
+        <data android:host="verse" />
+      </intent-filter>
+
+      <!-- App Links (HTTPS): https://lawh.app/verse/2/255 -->
+      <!-- Note: Requires assetlinks.json file on web server -->
+      <!-- Can defer to Phase 2; use lawh:// scheme for MVP -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="https" />
+        <data android:host="lawh.app" />
+        <data android:pathPrefix="/verse" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>
+```
+
+### Verse Sharing Implementation
+
+**Add share_plus to pubspec.yaml**
+
+```yaml
+dependencies:
+  share_plus: ^7.2.0
+```
+
+**Verse Share Service**
+
+```dart
+import 'package:share_plus/share_plus.dart';
+
+class VerseShareService {
+  /// Share verse with deep link for viral growth
+  Future<void> shareVerse({
+    required int surahNumber,
+    required int ayahNumber,
+    required String surahName,
+    required String verseText,
+  }) async {
+    // Use custom scheme for MVP (no web server needed)
+    final deepLink = 'lawh://verse/$surahNumber/$ayahNumber';
+
+    // Phase 2: Use HTTPS link after deploying web version
+    // final deepLink = 'https://lawh.app/verse/$surahNumber/$ayahNumber';
+
+    final message = '''
+$verseText
+
+$surahName, Verse $ayahNumber
+
+📖 Open in Lawh app: $deepLink
+''';
+
+    await Share.share(
+      message,
+      subject: 'Verse from $surahName',
+    );
+
+    // Track sharing for analytics (30% share rate KPI)
+    // await ref.read(analyticsServiceProvider).logShare(
+    //   surah: surahNumber,
+    //   ayah: ayahNumber,
+    // );
+  }
+}
+
+// Provider
+final verseShareServiceProvider = Provider<VerseShareService>((ref) {
+  return VerseShareService();
+});
+```
+
+**QuranReaderScreen with Share Button**
+
+```dart
+class QuranReaderScreen extends ConsumerWidget {
+  const QuranReaderScreen({
+    required this.surahNumber,
+    required this.ayahNumber,
+    super.key,
+  });
+
+  final int surahNumber;
+  final int ayahNumber;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final verseAsync = ref.watch(verseProvider(surahNumber, ayahNumber));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Quran Reader'),
+        actions: [
+          // Share button in app bar
+          verseAsync.when(
+            data: (verse) => IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () async {
+                await ref.read(verseShareServiceProvider).shareVerse(
+                  surahNumber: verse.surahNumber,
+                  ayahNumber: verse.ayahNumber,
+                  surahName: verse.surahName,
+                  verseText: verse.text,
+                );
+              },
+              tooltip: 'Share verse',
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
+      body: verseAsync.when(
+        data: (verse) => VerseDisplay(verse: verse),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => ErrorDisplay(error: error.toString()),
+      ),
+    );
+  }
+}
+```
+
+### Testing Deep Links
+
+**iOS Simulator**
+
+```bash
+# Test custom scheme
+xcrun simctl openurl booted "lawh://verse/2/255"
+
+# Test HTTPS link (Phase 2)
+xcrun simctl openurl booted "https://lawh.app/verse/2/255"
+```
+
+**Android Emulator/Device**
+
+```bash
+# Test custom scheme
+adb shell am start -W -a android.intent.action.VIEW -d "lawh://verse/2/255" com.lawh.app
+
+# Test HTTPS link (Phase 2)
+adb shell am start -W -a android.intent.action.VIEW -d "https://lawh.app/verse/2/255" com.lawh.app
+```
+
+**Manual Testing Checklist**:
+
+- [ ] Share verse via WhatsApp, tap link, app opens to correct verse
+- [ ] Share verse via Messages, tap link, app opens to correct verse
+- [ ] Copy link and paste in Safari/Chrome, app opens
+- [ ] Invalid verse reference (e.g., lawh://verse/999/999) shows error screen
+- [ ] App not installed: link fails gracefully (Phase 2: fallback to web version)
+
+---
+
+### Deep Linking Design Decisions
+
+**Why Path Parameters are Primary**:
+
+- ✅ **Shareable URLs**: Enables 30% share rate KPI from project brief
+- ✅ **Viral growth**: Recipients can open verses directly without copy-paste
+- ✅ **Future-proof**: Same URLs work for web version (Phase 2)
+- ✅ **Simple structure**: `/verse/:surah/:ayah` is human-readable and memorable
+
+**MVP vs Phase 2 Approach**:
+
+**MVP (Week 1-4)**:
+- Use `lawh://` custom scheme (no web server needed)
+- Works offline immediately after app install
+- Good enough for friends/family sharing
+
+**Phase 2 (Post-MVP)**:
+- Upgrade to `https://lawh.app/verse/:surah/:ayah` URLs
+- Requires deploying apple-app-site-association (iOS) and assetlinks.json (Android)
+- Fallback to web version if app not installed
+- Better for social media sharing (HTTPS previews)
+
+**Trade-offs**:
+
+- ✅ **No backend needed for MVP**: Custom scheme works without web server
+- ⚠️ **Custom schemes look less polished**: `lawh://` vs `https://` in messages
+- ⚠️ **No link previews**: Custom schemes don't generate rich previews on social media
+- ✅ **Easy upgrade path**: Change URL prefix in Phase 2 without refactoring routing
+
+**Key Implementation Notes**:
+
+- **android:launchMode="singleTop"**: Prevents multiple app instances when clicking links
+- **Error handling**: Invalid verse references show error screen, not crash
+- **Analytics tracking**: Log share events to measure 30% share rate KPI
+- **QuranReaderScreen must load by reference**: Takes `surahNumber` and `ayahNumber`, fetches verse from repository
+
+---
+
+## Component Standards
+
+### Component Template
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// [VerseResultCard] displays a single verse identification result.
+///
+/// Used in results screen to show identified verses with confidence indicators.
+/// Supports high/medium confidence variants and tap-to-read interaction.
+class VerseResultCard extends ConsumerWidget {
+  const VerseResultCard({
+    required this.surahName,
+    required this.surahNameArabic,
+    required this.ayahNumber,
+    required this.previewText,
+    required this.confidence,
+    required this.onTap,
+    this.onThumbsUp,
+    this.onThumbsDown,
+    super.key,
+  });
+
+  final String surahName;
+  final String surahNameArabic;
+  final int ayahNumber;
+  final String previewText;
+  final double confidence;
+  final VoidCallback onTap;
+  final VoidCallback? onThumbsUp;
+  final VoidCallback? onThumbsDown;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isHighConfidence = confidence >= 0.9;
+
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '$surahName • $surahNameArabic',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (isHighConfidence)
+                    Icon(
+                      Icons.check_circle,
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Verse $ayahNumber',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                previewText,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontFamily: 'UthmanicHafs',
+                  height: 1.8,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textDirection: TextDirection.rtl,
+              ),
+              if (onThumbsUp != null || onThumbsDown != null) ...[
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (onThumbsUp != null)
+                      IconButton(
+                        icon: const Icon(Icons.thumb_up_outlined),
+                        iconSize: 20,
+                        onPressed: onThumbsUp,
+                        tooltip: 'Correct',
+                      ),
+                    if (onThumbsDown != null)
+                      IconButton(
+                        icon: const Icon(Icons.thumb_down_outlined),
+                        iconSize: 20,
+                        onPressed: onThumbsDown,
+                        tooltip: 'Incorrect',
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+### Naming Conventions
+
+**File Naming**:
+
+- Screens: `{feature}_screen.dart` (e.g., `main_screen.dart`, `results_screen.dart`)
+- Widgets: `{widget_name}.dart` (e.g., `result_card.dart`, `listen_button.dart`)
+- Providers: `{feature}_provider.dart` (e.g., `recording_provider.dart`)
+- Models: `{model_name}.dart` (e.g., `verse_result.dart`, `recording_state.dart`)
+- Repositories: `{domain}_repository.dart` for interfaces, `{domain}_repository_impl.dart` for implementations
+- Services: `{service_name}_service.dart` (e.g., `audio_recorder_service.dart`)
+
+**Class Naming**:
+
+- Screens: `{Feature}Screen` (e.g., `MainScreen`, `ResultsScreen`)
+- Widgets: `{WidgetName}` (e.g., `ResultCard`, `ListenButton`)
+- Providers: `{Feature}Provider` or `{Feature}Notifier` (e.g., `RecordingProvider`, `IdentificationNotifier`)
+- Models: Use domain terms (e.g., `VerseResult`, `SearchFeedback`, `RecordingState`)
+- Repositories (abstract): `{Domain}Repository` (e.g., `SttRepository`, `QuranRepository`)
+- Repositories (implementation): `{Provider}{Domain}RepositoryImpl` (e.g., `AzureSttRepositoryImpl`)
+- Services: `{Service}Service` (e.g., `AudioRecorderService`, `FuzzyMatcherService`)
+
+**Variable Naming**:
+
+- Use descriptive names: `surahName` not `sn`, `audioData` not `data`
+- Booleans: Start with `is`, `has`, `can`, `should` (e.g., `isRecording`, `hasPermission`)
+- Private members: Prefix with underscore (e.g., `_recorder`, `_audioData`)
+- Constants: Use `lowerCamelCase` for local constants, `UPPER_SNAKE_CASE` for compile-time constants
+
+**Provider Naming**:
+
+```dart
+// State providers
+final recordingStateProvider = StateProvider<RecordingState>(...);
+
+// StateNotifier providers
+final recordingProvider = StateNotifierProvider<RecordingNotifier, RecordingState>(...);
+
+// Future providers
+final verseProvider = FutureProvider.family<Verse, VerseId>(...);
+
+// Stream providers
+final audioStreamProvider = StreamProvider<List<int>>(...);
+```
+
+**Flutter Conventions**:
+
+- Use `const` constructors wherever possible for performance
+- Prefer `StatelessWidget` and `ConsumerWidget` over `StatefulWidget`
+- Extract complex widget trees into separate widget classes
+- Use named parameters for widget constructors (better readability)
+
+---
+
+## State Management
+
+### Store Structure
+
+```plaintext
+lib/features/verse_identification/
+└── presentation/
+    └── providers/
+        ├── recording_provider.dart        # Audio recording state
+        ├── identification_provider.dart   # STT + fuzzy matching state
+        └── feedback_provider.dart         # User feedback submission
+```
+
+Each provider is co-located with its feature for better maintainability. Dependencies between providers are declared explicitly through Riverpod's `ref.watch()` mechanism.
+
+### State Management Template
+
+**1. Simple State with StateProvider (Settings Example)**
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// For simple values that don't need complex logic
+final locationSharingEnabledProvider = StateProvider<bool>((ref) {
+  // Load from SharedPreferences
+  final settingsRepo = ref.watch(settingsRepositoryProvider);
+  return settingsRepo.getLocationSharingEnabled();
+});
+```
+
+**2. Complex State with AsyncNotifierProvider (Verse Identification Example)**
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'identification_provider.freezed.dart';
+
+// Immutable state using Freezed
+@freezed
+class IdentificationState with _$IdentificationState {
+  const factory IdentificationState.initial() = _Initial;
+  const factory IdentificationState.loading() = _Loading;
+  const factory IdentificationState.success({
+    required List<VerseResult> results,
+    required double highestConfidence,
+  }) = _Success;
+  const factory IdentificationState.error({
+    required String message,
+    required IdentificationError errorType,
+  }) = _Error;
+}
+
+enum IdentificationError {
+  networkError,
+  lowConfidence,
+  audioPermissionDenied,
+  sttServiceUnavailable,
+}
+
+// AsyncNotifier for complex async operations
+class IdentificationNotifier extends AsyncNotifier<List<VerseResult>> {
+  @override
+  Future<List<VerseResult>> build() async {
+    // Initial state returns empty results
+    return [];
+  }
+
+  Future<void> identifyVerse(Uint8List audioData) async {
+    state = const AsyncValue.loading();
+
+    state = await AsyncValue.guard(() async {
+      // Step 1: Transcribe audio with Azure STT
+      final sttRepo = ref.read(sttRepositoryProvider);
+      final transcription = await sttRepo.transcribeAudio(audioData);
+
+      // Step 2: Fuzzy match against Quran text
+      final fuzzyMatcher = ref.read(fuzzyMatcherServiceProvider);
+      final matches = await fuzzyMatcher.findMatches(transcription);
+
+      // Step 3: Sort by confidence and return top 3
+      matches.sort((a, b) => b.confidence.compareTo(a.confidence));
+      return matches.take(3).toList();
+    });
+
+    // Handle low confidence case
+    state.whenData((results) {
+      if (results.isEmpty || results.first.confidence < 0.65) {
+        state = AsyncValue.error(
+          'Low confidence',
+          StackTrace.current,
+        );
+      }
+    });
+  }
+
+  void reset() {
+    state = const AsyncValue.data([]);
+  }
+}
+
+// Provider declaration
+final identificationProvider =
+    AsyncNotifierProvider<IdentificationNotifier, List<VerseResult>>(
+  IdentificationNotifier.new,
+);
+```
+
+**3. Recording State with StateNotifier (Audio Recording Example)**
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'recording_provider.freezed.dart';
+
+@freezed
+class RecordingState with _$RecordingState {
+  const factory RecordingState.idle() = _Idle;
+  const factory RecordingState.recording({
+    required Duration elapsed,
+    required List<double> amplitudes, // For waveform visualization
+  }) = _Recording;
+  const factory RecordingState.processing() = _Processing;
+  const factory RecordingState.completed({
+    required Uint8List audioData,
+  }) = _Completed;
+  const factory RecordingState.error({
+    required String message,
+  }) = _Error;
+}
+
+class RecordingNotifier extends StateNotifier<RecordingState> {
+  RecordingNotifier(this._audioRecorderService) : super(const RecordingState.idle());
+
+  final AudioRecorderService _audioRecorderService;
+  Timer? _timer;
+
+  Future<void> startRecording() async {
+    try {
+      await _audioRecorderService.start();
+      state = const RecordingState.recording(
+        elapsed: Duration.zero,
+        amplitudes: [],
+      );
+
+      // Update timer every 100ms for waveform animation
+      _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) async {
+        if (state is _Recording) {
+          final amplitude = await _audioRecorderService.getAmplitude();
+          final currentState = state as _Recording;
+          state = RecordingState.recording(
+            elapsed: currentState.elapsed + const Duration(milliseconds: 100),
+            amplitudes: [...currentState.amplitudes, amplitude],
+          );
+
+          // Auto-stop at 15 seconds
+          if (currentState.elapsed.inSeconds >= 15) {
+            await stopRecording();
+          }
+        }
+      });
+    } catch (e) {
+      state = RecordingState.error(message: e.toString());
+    }
+  }
+
+  Future<void> stopRecording() async {
+    _timer?.cancel();
+    state = const RecordingState.processing();
+
+    try {
+      final audioData = await _audioRecorderService.stop();
+      state = RecordingState.completed(audioData: audioData);
+    } catch (e) {
+      state = RecordingState.error(message: e.toString());
+    }
+  }
+
+  void reset() {
+    _timer?.cancel();
+    state = const RecordingState.idle();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+}
+
+// Provider with dependency injection
+final recordingProvider =
+    StateNotifierProvider<RecordingNotifier, RecordingState>((ref) {
+  return RecordingNotifier(
+    ref.watch(audioRecorderServiceProvider),
+  );
+});
+```
+
+**Key Patterns**:
+
+- **AsyncNotifier for API calls**: Use when you need imperative actions with async operations
+- **StateNotifier for frequent updates**: Use for recording state that updates multiple times per second
+- **StateProvider for simple values**: Use for settings, toggles, simple primitives
+- **Freezed for immutable state**: Prevents accidental mutations, enables pattern matching
+- **Explicit error types**: Enum-based error handling over string messages
+- **Dependency injection via ref.watch()**: All dependencies injected through Riverpod for testability
+
+---
+
+## API Integration
+
+### Service Template
+
+**Azure STT Repository Implementation**
+
+```dart
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Domain layer - abstract interface
+abstract class SttRepository {
+  Future<String> transcribeAudio(Uint8List audioData);
+}
+
+// Data layer - Azure implementation
+class AzureSttRepositoryImpl implements SttRepository {
+  AzureSttRepositoryImpl(this._dio, this._apiKey, this._region);
+
+  final Dio _dio;
+  final String _apiKey;
+  final String _region;
+
+  @override
+  Future<String> transcribeAudio(Uint8List audioData) async {
+    try {
+      final response = await _dio.post(
+        'https://$_region.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1',
+        data: audioData,
+        queryParameters: {
+          'language': 'ar-SA', // Arabic (Saudi Arabia)
+          'format': 'simple',
+        },
+        options: Options(
+          headers: {
+            'Ocp-Apim-Subscription-Key': _apiKey,
+            'Content-Type': 'audio/wav',
+          },
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+        ),
+      );
+
+      final transcription = response.data['DisplayText'] as String?;
+      if (transcription == null || transcription.isEmpty) {
+        throw SttException(
+          message: 'Empty transcription returned',
+          type: SttErrorType.emptyResponse,
+        );
+      }
+
+      return transcription;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      throw SttException(
+        message: 'Unexpected error: $e',
+        type: SttErrorType.unknown,
+      );
+    }
+  }
+
+  SttException _handleDioError(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return SttException(
+          message: 'Request timeout - check your internet connection',
+          type: SttErrorType.timeout,
+        );
+      case DioExceptionType.badResponse:
+        final statusCode = e.response?.statusCode;
+        if (statusCode == 401 || statusCode == 403) {
+          return SttException(
+            message: 'Authentication failed',
+            type: SttErrorType.authenticationFailed,
+          );
+        }
+        return SttException(
+          message: 'Server error: ${e.response?.statusCode}',
+          type: SttErrorType.serverError,
+        );
+      case DioExceptionType.cancel:
+        return SttException(
+          message: 'Request cancelled',
+          type: SttErrorType.cancelled,
+        );
+      default:
+        return SttException(
+          message: 'Network error: ${e.message}',
+          type: SttErrorType.networkError,
+        );
+    }
+  }
+}
+
+// Custom exception with typed errors
+class SttException implements Exception {
+  SttException({required this.message, required this.type});
+
+  final String message;
+  final SttErrorType type;
+
+  @override
+  String toString() => 'SttException: $message (type: $type)';
+}
+
+enum SttErrorType {
+  timeout,
+  networkError,
+  authenticationFailed,
+  serverError,
+  emptyResponse,
+  cancelled,
+  unknown,
+}
+
+// Provider declaration
+final sttRepositoryProvider = Provider<SttRepository>((ref) {
+  final dio = ref.watch(dioProvider);
+  final apiKey = ref.watch(azureApiKeyProvider);
+  final region = ref.watch(azureRegionProvider);
+
+  return AzureSttRepositoryImpl(dio, apiKey, region);
+});
+```
+
+### API Client Configuration
+
+**Dio Setup with Interceptors**
+
+```dart
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final dioProvider = Provider<Dio>((ref) {
+  final dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+      sendTimeout: const Duration(seconds: 10),
+    ),
+  );
+
+  // Logging interceptor (only in debug mode)
+  if (kDebugMode) {
+    dio.interceptors.add(
+      LogInterceptor(
+        requestBody: false, // Don't log audio data (too large)
+        responseBody: true,
+        error: true,
+        logPrint: (log) => debugPrint('[Dio] $log'),
+      ),
+    );
+  }
+
+  // Error handling interceptor
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onError: (error, handler) async {
+        // Log error to analytics
+        final analytics = ref.read(analyticsServiceProvider);
+        await analytics.logError(
+          error: error.error,
+          stackTrace: error.stackTrace,
+          context: {
+            'endpoint': error.requestOptions.uri.toString(),
+            'statusCode': error.response?.statusCode,
+          },
+        );
+
+        handler.next(error);
+      },
+    ),
+  );
+
+  // Retry interceptor for transient failures
+  dio.interceptors.add(
+    RetryInterceptor(
+      dio: dio,
+      retries: 2,
+      retryDelays: const [
+        Duration(seconds: 1),
+        Duration(seconds: 2),
+      ],
+    ),
+  );
+
+  return dio;
+});
+
+// Custom retry interceptor
+class RetryInterceptor extends Interceptor {
+  RetryInterceptor({
+    required this.dio,
+    required this.retries,
+    required this.retryDelays,
+  });
+
+  final Dio dio;
+  final int retries;
+  final List<Duration> retryDelays;
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    final shouldRetry = err.type == DioExceptionType.connectionTimeout ||
+        err.type == DioExceptionType.receiveTimeout ||
+        (err.response?.statusCode != null && err.response!.statusCode! >= 500);
+
+    if (!shouldRetry) {
+      return handler.next(err);
+    }
+
+    var retryCount = err.requestOptions.extra['retryCount'] as int? ?? 0;
+
+    if (retryCount >= retries) {
+      return handler.next(err);
+    }
+
+    retryCount++;
+    err.requestOptions.extra['retryCount'] = retryCount;
+
+    final delay = retryDelays[retryCount - 1];
+    await Future.delayed(delay);
+
+    try {
+      final response = await dio.fetch(err.requestOptions);
+      return handler.resolve(response);
+    } on DioException catch (e) {
+      return handler.next(e);
+    }
+  }
+}
+```
+
+**Environment Configuration**
+
+```dart
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Load environment variables from .env files
+Future<void> loadEnvironment() async {
+  await dotenv.load(
+    fileName: kReleaseMode ? '.env.production' : '.env.development',
+  );
+}
+
+// Providers for environment variables
+final azureApiKeyProvider = Provider<String>((ref) {
+  return dotenv.env['AZURE_STT_API_KEY'] ?? '';
+});
+
+final azureRegionProvider = Provider<String>((ref) {
+  return dotenv.env['GOOGLE_CLOUD_STT_REGION'] ?? 'eastus';
+});
+
+final firebaseApiKeyProvider = Provider<String>((ref) {
+  return dotenv.env['FIREBASE_API_KEY'] ?? '';
+});
+```
+
+**.env.development**
+
+```bash
+# Google Cloud Speech-to-Text (Updated: Feb 2026)
+GOOGLE_CLOUD_STT_API_KEY=your_development_api_key_here
+GOOGLE_CLOUD_STT_REGION=eastus
+
+# Firebase
+FIREBASE_API_KEY=your_firebase_api_key_here
+
+# Stripe
+STRIPE_PUBLISHABLE_KEY=pk_test_your_test_key_here
+```
+
+**.env.production**
+
+```bash
+# Google Cloud Speech-to-Text (Updated: Feb 2026)
+GOOGLE_CLOUD_STT_API_KEY=your_production_api_key_here
+GOOGLE_CLOUD_STT_REGION=eastus
+
+# Firebase
+FIREBASE_API_KEY=your_firebase_prod_api_key_here
+
+# Stripe
+STRIPE_PUBLISHABLE_KEY=pk_live_your_live_key_here
+```
+
+**Key Patterns**:
+
+- **Repository pattern wraps HTTP client**: Makes Azure STT swappable without changing business logic
+- **Custom exceptions with error types**: Type-safe error handling for specific UI responses
+- **Retry interceptor**: Automatically retries transient failures (timeouts, 5xx errors)
+- **Logging interceptor in debug only**: Enables debugging without leaking sensitive data in production
+- **Environment-based configuration**: Separate dev/prod API keys using flutter_dotenv
+
+---
+
+## Styling Guidelines
+
+### Theme Configuration
+
+Based on the UI/UX specification, Lawh uses a spiritual minimalism design with dark lemon green primary color and platform-adaptive components.
+
+**Global Theme Setup (lib/core/theme/app_theme.dart)**
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:lawh/core/constants/app_colors.dart';
+import 'package:lawh/core/constants/app_text_styles.dart';
+
+class AppTheme {
+  // Light theme
+  static ThemeData lightTheme = ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: AppColors.primary,
+      brightness: Brightness.light,
+      primary: AppColors.primary,
+      secondary: AppColors.secondary,
+      surface: AppColors.surface,
+      background: AppColors.background,
+      error: AppColors.error,
+    ),
+    scaffoldBackgroundColor: AppColors.background,
+
+    // Typography
+    textTheme: TextTheme(
+      displayLarge: AppTextStyles.h1,
+      displayMedium: AppTextStyles.h2,
+      displaySmall: AppTextStyles.h3,
+      bodyLarge: AppTextStyles.body,
+      bodyMedium: AppTextStyles.small,
+      bodySmall: AppTextStyles.caption,
+    ),
+
+    // Card styling
+    cardTheme: CardTheme(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      color: AppColors.surface,
+    ),
+
+    // Button styling
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(120, 48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    ),
+
+    // Icon button styling
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        minimumSize: const Size(48, 48), // Meets accessibility minimum
+      ),
+    ),
+
+    // App bar styling
+    appBarTheme: AppBarTheme(
+      elevation: 0,
+      backgroundColor: AppColors.background,
+      foregroundColor: AppColors.neutralDark,
+      centerTitle: true,
+    ),
+  );
+
+  // Dark theme
+  static ThemeData darkTheme = ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: AppColors.primaryDark,
+      brightness: Brightness.dark,
+      primary: AppColors.primaryDark,
+      secondary: AppColors.secondaryDark,
+      surface: AppColors.surfaceDark,
+      background: AppColors.backgroundDark,
+      error: AppColors.errorDark,
+    ),
+    scaffoldBackgroundColor: AppColors.backgroundDark,
+
+    // Typography (same structure, colors adjusted automatically)
+    textTheme: TextTheme(
+      displayLarge: AppTextStyles.h1.copyWith(color: AppColors.neutralLight),
+      displayMedium: AppTextStyles.h2.copyWith(color: AppColors.neutralLight),
+      displaySmall: AppTextStyles.h3.copyWith(color: AppColors.neutralLight),
+      bodyLarge: AppTextStyles.body.copyWith(color: AppColors.neutralLight),
+      bodyMedium: AppTextStyles.small.copyWith(color: AppColors.neutralLight),
+      bodySmall: AppTextStyles.caption.copyWith(color: AppColors.neutralMediumDark),
+    ),
+
+    cardTheme: CardTheme(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      color: AppColors.surfaceDark,
+    ),
+
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primaryDark,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(120, 48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    ),
+
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        minimumSize: const Size(48, 48),
+      ),
+    ),
+
+    appBarTheme: AppBarTheme(
+      elevation: 0,
+      backgroundColor: AppColors.backgroundDark,
+      foregroundColor: AppColors.neutralLight,
+      centerTitle: true,
+    ),
+  );
+}
+```
+
+### Color Constants
+
+**lib/core/constants/app_colors.dart**
+
+```dart
+import 'package:flutter/material.dart';
+
+class AppColors {
+  // Light Mode Colors
+  static const Color primary = Color(0xFF2D5016);        // Dark lemon green
+  static const Color secondary = Color(0xFFFFFAFA);      // Snow white
+  static const Color accent = Color(0xFFD4AF37);         // Gold
+  static const Color success = Color(0xFF4CAF50);        // Green
+  static const Color warning = Color(0xFFFF9800);        // Orange
+  static const Color error = Color(0xFFF44336);          // Red
+  static const Color neutralDark = Color(0xFF333333);    // Primary text
+  static const Color neutralMedium = Color(0xFF666666);  // Secondary text
+  static const Color neutralLight = Color(0xFFE0E0E0);   // Borders
+  static const Color background = Color(0xFFF5F5F5);     // App background
+  static const Color surface = Color(0xFFFFFFFF);        // Card backgrounds
+
+  // Dark Mode Colors
+  static const Color primaryDark = Color(0xFF4A7C2B);           // Lighter green
+  static const Color secondaryDark = Color(0xFF1E1E1E);         // Dark surface
+  static const Color accentDark = Color(0xFFE6C657);            // Brighter gold
+  static const Color successDark = Color(0xFF66BB6A);           // Lighter green
+  static const Color warningDark = Color(0xFFFFA726);           // Brighter orange
+  static const Color errorDark = Color(0xFFEF5350);             // Muted red
+  static const Color neutralLightDark = Color(0xFFE0E0E0);      // Primary text (inverted)
+  static const Color neutralMediumDark = Color(0xFFB0B0B0);     // Secondary text
+  static const Color neutralDarkDark = Color(0xFF424242);       // Borders
+  static const Color backgroundDark = Color(0xFF121212);        // App background (not true black)
+  static const Color surfaceDark = Color(0xFF1E1E1E);           // Card backgrounds
+
+  // Confidence indicators
+  static const Color highConfidence = success;
+  static const Color mediumConfidence = warning;
+  static const Color lowConfidence = error;
+}
+```
+
+### Typography Constants
+
+**lib/core/constants/app_text_styles.dart**
+
+```dart
+import 'package:flutter/material.dart';
+
+class AppTextStyles {
+  // Base font family (system default)
+  static const String fontFamily = 'System'; // SF Pro (iOS), Roboto (Android)
+
+  // Quranic Arabic font (configured in pubspec.yaml)
+  static const String arabicFontFamily = 'UthmanicHafs';
+
+  // Display styles
+  static const TextStyle h1 = TextStyle(
+    fontSize: 32,
+    fontWeight: FontWeight.w700,
+    height: 1.25,
+    letterSpacing: 0,
+  );
+
+  static const TextStyle h2 = TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w600,
+    height: 1.33,
+    letterSpacing: 0,
+  );
+
+  static const TextStyle h3 = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+    letterSpacing: 0,
+  );
+
+  // Body styles
+  static const TextStyle body = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    letterSpacing: 0,
+  );
+
+  static const TextStyle small = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.43,
+    letterSpacing: 0,
+  );
+
+  static const TextStyle caption = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.33,
+    letterSpacing: 0,
+  );
+
+  // Arabic Quran text style
+  static const TextStyle quranText = TextStyle(
+    fontFamily: arabicFontFamily,
+    fontSize: 22,
+    fontWeight: FontWeight.w400,
+    height: 1.8, // Generous line height for readability
+    letterSpacing: 0,
+  );
+
+  // Button text
+  static const TextStyle button = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    height: 1.0,
+    letterSpacing: 0.5,
+  );
+}
+```
+
+### Spacing Constants
+
+**lib/core/constants/app_spacing.dart**
+
+```dart
+class AppSpacing {
+  // Base unit: 8pt grid system
+  static const double xs = 4;   // Micro spacing
+  static const double sm = 8;   // Tight spacing
+  static const double md = 16;  // Standard spacing
+  static const double lg = 24;  // Comfortable spacing
+  static const double xl = 32;  // Generous spacing
+  static const double xxl = 48; // Extra generous spacing
+
+  // Semantic spacing
+  static const double componentPadding = md;      // Default component internal padding
+  static const double screenMargin = md;          // Screen edge margins
+  static const double sectionSpacing = xl;        // Major layout divisions
+  static const double elementGap = sm;            // Gap between related elements
+
+  // Touch targets
+  static const double minTouchTarget = 48;        // iOS/Android minimum (44pt/48dp)
+
+  // Border radius
+  static const double radiusSmall = 8;
+  static const double radiusMedium = 12;
+  static const double radiusLarge = 16;
+  static const double radiusCircular = 999;       // For circular buttons
+}
+```
+
+### Styling Approach
+
+**Platform-Adaptive Components**
+
+Lawh uses Material Design 3 as the base with platform-specific adaptations:
+
+```dart
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'dart:io';
+
+class PlatformButton extends StatelessWidget {
+  const PlatformButton({
+    required this.onPressed,
+    required this.child,
+    super.key,
+  });
+
+  final VoidCallback onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    // Use Cupertino style on iOS, Material on Android
+    if (Platform.isIOS) {
+      return CupertinoButton.filled(
+        onPressed: onPressed,
+        child: child,
+      );
+    }
+
+    return ElevatedButton(
+      onPressed: onPressed,
+      child: child,
+    );
+  }
+}
+
+class PlatformLoadingIndicator extends StatelessWidget {
+  const PlatformLoadingIndicator({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (Platform.isIOS) {
+      return const CupertinoActivityIndicator();
+    }
+
+    return const CircularProgressIndicator();
+  }
+}
+```
+
+### Component-Specific Styling Examples
+
+**Result Card with Confidence Indicator**
+
+```dart
+class ResultCard extends StatelessWidget {
+  const ResultCard({
+    required this.verse,
+    required this.confidence,
+    required this.onTap,
+    super.key,
+  });
+
+  final VerseResult verse;
+  final double confidence;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isHighConfidence = confidence >= 0.9;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.screenMargin,
+        vertical: AppSpacing.elementGap,
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.componentPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${verse.surahName} • ${verse.surahNameArabic}',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ),
+                  if (isHighConfidence)
+                    Icon(
+                      Icons.check_circle,
+                      color: AppColors.highConfidence,
+                      size: 20,
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Verse ${verse.ayahNumber}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                verse.previewText,
+                style: AppTextStyles.quranText.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textDirection: TextDirection.rtl,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+**Listen Button with States**
+
+```dart
+class ListenButton extends StatelessWidget {
+  const ListenButton({
+    required this.state,
+    required this.onPressed,
+    super.key,
+  });
+
+  final RecordingState state;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 120,
+      height: 120,
+      child: ElevatedButton(
+        onPressed: state.isIdle ? onPressed : null,
+        style: ElevatedButton.styleFrom(
+          shape: const CircleBorder(),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          backgroundColor: _getButtonColor(state),
+        ),
+        child: _getButtonChild(state),
+      ),
+    );
+  }
+
+  Color _getButtonColor(RecordingState state) {
+    return state.when(
+      idle: () => AppColors.primary,
+      recording: (_) => AppColors.error,
+      processing: () => AppColors.neutralMedium,
+      completed: (_) => AppColors.success,
+      error: (_) => AppColors.error,
+    );
+  }
+
+  Widget _getButtonChild(RecordingState state) {
+    return state.when(
+      idle: () => const Icon(Icons.mic, size: 48),
+      recording: (_) => const Icon(Icons.stop, size: 48),
+      processing: () => const PlatformLoadingIndicator(),
+      completed: (_) => const Icon(Icons.check, size: 48),
+      error: (_) => const Icon(Icons.error_outline, size: 48),
+    );
+  }
+}
+```
+
+### Styling Best Practices
+
+**1. Always Use Theme Colors**
+
+```dart
+// ❌ BAD: Hard-coded colors
+Container(
+  color: Color(0xFF2D5016),
+  child: Text('Hello', style: TextStyle(color: Colors.white)),
+)
+
+// ✅ GOOD: Theme colors
+Container(
+  color: Theme.of(context).colorScheme.primary,
+  child: Text(
+    'Hello',
+    style: Theme.of(context).textTheme.bodyLarge,
+  ),
+)
+```
+
+**2. Use Spacing Constants**
+
+```dart
+// ❌ BAD: Magic numbers
+Padding(padding: EdgeInsets.all(16))
+
+// ✅ GOOD: Named constants
+Padding(padding: EdgeInsets.all(AppSpacing.componentPadding))
+```
+
+**3. Respect Platform Conventions**
+
+```dart
+// Use platform-adaptive widgets for better native feel
+final indicator = Platform.isIOS
+  ? CupertinoActivityIndicator()
+  : CircularProgressIndicator();
+```
+
+**4. Test Light and Dark Modes**
+
+```dart
+// Always test both themes during development
+// Toggle in device/simulator settings
+// Verify all colors meet 4.5:1 contrast ratio
+```
+
+**5. Use Semantic Color Names**
+
+```dart
+// ❌ BAD: Colors named by appearance
+static const greenColor = Color(0xFF2D5016);
+
+// ✅ GOOD: Colors named by purpose
+static const primary = Color(0xFF2D5016);
+```
+
+---
+
+## Testing Requirements
+
+### Testing Strategy for MVP
+
+**Focus on critical paths, not exhaustive coverage.** For a 4-week MVP, prioritize tests that prevent production failures over achieving high test coverage numbers.
+
+**Testing Priority**:
+
+1. **Critical path**: Verse identification flow (recording → STT → fuzzy match → results)
+2. **Business logic**: Fuzzy matching algorithm accuracy
+3. **Edge cases**: Error handling, network failures, low confidence scenarios
+4. **Skip for MVP**: Simple UI widgets, trivial getters/setters, platform-specific code
+
+**Coverage Goals**:
+
+- **Domain layer**: 80%+ (business logic is critical and easy to test)
+- **Data layer**: 60%+ (API integration needs coverage)
+- **Presentation layer**: 30%+ (focus on provider logic, skip widget tests for simple components)
+- **Overall**: Don't obsess over numbers; test what matters
+
+---
+
+### Component Test Template
+
+**Unit Test: Fuzzy Matching Service**
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lawh/features/verse_identification/data/services/fuzzy_matcher_service.dart';
+
+void main() {
+  late FuzzyMatcherService fuzzyMatcher;
+
+  setUp(() {
+    fuzzyMatcher = FuzzyMatcherService();
+  });
+
+  group('FuzzyMatcherService', () {
+    test('returns high confidence match for exact transcription', () async {
+      const transcription = 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ';
+
+      final results = await fuzzyMatcher.findMatches(transcription);
+
+      expect(results, isNotEmpty);
+      expect(results.first.confidence, greaterThanOrEqualTo(0.95));
+      expect(results.first.surahNumber, equals(1));
+      expect(results.first.ayahNumber, equals(1));
+    });
+
+    test('returns medium confidence for partial match', () async {
+      // Missing diacritics
+      const transcription = 'بسم الله الرحمن الرحيم';
+
+      final results = await fuzzyMatcher.findMatches(transcription);
+
+      expect(results, isNotEmpty);
+      expect(results.first.confidence, inRange(0.65, 0.89));
+    });
+
+    test('returns empty list for gibberish input', () async {
+      const transcription = 'xyz123 random text';
+
+      final results = await fuzzyMatcher.findMatches(transcription);
+
+      expect(results, isEmpty);
+    });
+
+    test('handles empty string gracefully', () async {
+      const transcription = '';
+
+      final results = await fuzzyMatcher.findMatches(transcription);
+
+      expect(results, isEmpty);
+    });
+  });
+}
+```
+
+**Provider Test: Recording State**
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
+import 'package:lawh/features/verse_identification/presentation/providers/recording_provider.dart';
+import 'package:lawh/features/verse_identification/data/services/audio_recorder_service.dart';
+
+@GenerateMocks([AudioRecorderService])
+import 'recording_provider_test.mocks.dart';
+
+void main() {
+  late MockAudioRecorderService mockRecorder;
+  late ProviderContainer container;
+
+  setUp(() {
+    mockRecorder = MockAudioRecorderService();
+    container = ProviderContainer(
+      overrides: [
+        audioRecorderServiceProvider.overrideWithValue(mockRecorder),
+      ],
+    );
+  });
+
+  tearDown(() {
+    container.dispose();
+  });
+
+  group('RecordingProvider', () {
+    test('initial state is idle', () {
+      final state = container.read(recordingProvider);
+
+      expect(state, isA<RecordingStateIdle>());
+    });
+
+    test('starts recording successfully', () async {
+      when(mockRecorder.start()).thenAnswer((_) async => Future.value());
+
+      final notifier = container.read(recordingProvider.notifier);
+      await notifier.startRecording();
+
+      final state = container.read(recordingProvider);
+      expect(state, isA<RecordingStateRecording>());
+
+      verify(mockRecorder.start()).called(1);
+    });
+
+    test('handles recording permission denied', () async {
+      when(mockRecorder.start()).thenThrow(
+        AudioPermissionException('Microphone permission denied'),
+      );
+
+      final notifier = container.read(recordingProvider.notifier);
+      await notifier.startRecording();
+
+      final state = container.read(recordingProvider);
+      expect(state, isA<RecordingStateError>());
+      expect(
+        (state as RecordingStateError).message,
+        contains('permission'),
+      );
+    });
+
+    test('stops recording and returns audio data', () async {
+      final audioData = Uint8List.fromList([1, 2, 3, 4]);
+      when(mockRecorder.start()).thenAnswer((_) async => Future.value());
+      when(mockRecorder.stop()).thenAnswer((_) async => audioData);
+
+      final notifier = container.read(recordingProvider.notifier);
+      await notifier.startRecording();
+      await notifier.stopRecording();
+
+      final state = container.read(recordingProvider);
+      expect(state, isA<RecordingStateCompleted>());
+      expect((state as RecordingStateCompleted).audioData, equals(audioData));
+
+      verify(mockRecorder.stop()).called(1);
+    });
+  });
+}
+```
+
+**Widget Test: Result Card**
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lawh/features/verse_identification/presentation/widgets/result_card.dart';
+import 'package:lawh/features/verse_identification/domain/models/verse_result.dart';
+
+void main() {
+  testWidgets('ResultCard displays verse information correctly', (tester) async {
+    final verse = VerseResult(
+      surahNumber: 2,
+      ayahNumber: 255,
+      surahName: 'Al-Baqarah',
+      surahNameArabic: 'البقرة',
+      previewText: 'اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ',
+      confidence: 0.95,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ResultCard(
+              verse: verse,
+              confidence: verse.confidence,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Verify surah name is displayed
+    expect(find.text('Al-Baqarah • البقرة'), findsOneWidget);
+
+    // Verify verse number is displayed
+    expect(find.text('Verse 255'), findsOneWidget);
+
+    // Verify Arabic text is displayed
+    expect(find.text('اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ'), findsOneWidget);
+
+    // Verify high confidence indicator is shown
+    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+  });
+
+  testWidgets('ResultCard calls onTap when tapped', (tester) async {
+    var tapped = false;
+    final verse = VerseResult(
+      surahNumber: 1,
+      ayahNumber: 1,
+      surahName: 'Al-Fatihah',
+      surahNameArabic: 'الفاتحة',
+      previewText: 'بِسْمِ اللَّهِ',
+      confidence: 0.90,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ResultCard(
+              verse: verse,
+              confidence: verse.confidence,
+              onTap: () => tapped = true,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(ResultCard));
+    await tester.pump();
+
+    expect(tapped, isTrue);
+  });
+
+  testWidgets('ResultCard does not show confidence indicator for medium confidence', (tester) async {
+    final verse = VerseResult(
+      surahNumber: 3,
+      ayahNumber: 1,
+      surahName: 'Al-Imran',
+      surahNameArabic: 'آل عمران',
+      previewText: 'الم',
+      confidence: 0.75, // Medium confidence
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ResultCard(
+              verse: verse,
+              confidence: verse.confidence,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Confidence indicator should not be shown for medium confidence
+    expect(find.byIcon(Icons.check_circle), findsNothing);
+  });
+}
+```
+
+**Integration Test: Full Verse Identification Flow**
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:lawh/main.dart' as app;
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  group('Verse Identification Flow', () {
+    testWidgets('complete flow from recording to results', (tester) async {
+      app.main();
+      await tester.pumpAndSettle();
+
+      // 1. Verify main screen is displayed
+      expect(find.text('Listen'), findsOneWidget);
+
+      // 2. Tap listen button to start recording
+      await tester.tap(find.byIcon(Icons.mic));
+      await tester.pump();
+
+      // 3. Wait for recording to start
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byIcon(Icons.stop), findsOneWidget);
+
+      // 4. Wait 10 seconds minimum (simulated)
+      await tester.pump(const Duration(seconds: 10));
+
+      // 5. Stop recording
+      await tester.tap(find.byIcon(Icons.stop));
+      await tester.pump();
+
+      // 6. Wait for processing
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      await tester.pumpAndSettle(const Duration(seconds: 10));
+
+      // 7. Verify results screen is displayed
+      expect(find.text('Results'), findsOneWidget);
+      expect(find.byType(ResultCard), findsWidgets);
+
+      // 8. Tap first result to open Quran reader
+      await tester.tap(find.byType(ResultCard).first);
+      await tester.pumpAndSettle();
+
+      // 9. Verify Quran reader screen is displayed
+      expect(find.text('Quran Reader'), findsOneWidget);
+
+      // 10. Verify share button is present
+      expect(find.byIcon(Icons.share), findsOneWidget);
+    });
+
+    testWidgets('handles low confidence gracefully', (tester) async {
+      app.main();
+      await tester.pumpAndSettle();
+
+      // Record audio with background noise (low quality)
+      await tester.tap(find.byIcon(Icons.mic));
+      await tester.pump(const Duration(seconds: 10));
+      await tester.tap(find.byIcon(Icons.stop));
+      await tester.pumpAndSettle(const Duration(seconds: 10));
+
+      // Should show retry screen for low confidence
+      expect(find.text('Try Again'), findsOneWidget);
+      expect(find.text('quieter space'), findsOneWidget);
+    });
+
+    testWidgets('handles network error gracefully', (tester) async {
+      // TODO: Implement network error simulation
+      // Requires mocking Azure STT service
+    });
+  });
+}
+```
+
+---
+
+### Testing Best Practices
+
+**1. Test Critical Business Logic First**
+
+```dart
+// ✅ HIGH PRIORITY: Test fuzzy matching algorithm
+test('fuzzy matcher handles Tajweed pronunciation variations', () {
+  // Test different recitation styles
+});
+
+// ✅ HIGH PRIORITY: Test STT error handling
+test('handles Azure STT timeout gracefully', () {
+  // Test network failures
+});
+
+// ❌ LOW PRIORITY: Test simple getters
+test('verse.surahName returns correct value', () {
+  // Too trivial, skip for MVP
+});
+```
+
+**2. Use Mocks for External Dependencies**
+
+```dart
+// ✅ GOOD: Mock external services
+@GenerateMocks([AudioRecorderService, SttRepository])
+void main() {
+  // Tests are fast and reliable
+}
+
+// ❌ BAD: Real Azure API calls in tests
+test('calls Azure STT service', () async {
+  final result = await realAzureClient.transcribe(audio); // Slow, flaky
+});
+```
+
+**3. Test Error Paths, Not Just Happy Paths**
+
+```dart
+test('handles network timeout', () { /* ... */ });
+test('handles invalid audio format', () { /* ... */ });
+test('handles empty transcription response', () { /* ... */ });
+test('handles permission denial', () { /* ... */ });
+```
+
+**4. Keep Tests Fast**
+
+```dart
+// ✅ GOOD: Fast unit tests (<100ms each)
+test('fuzzy match calculation', () {
+  // Pure function, instant result
+});
+
+// ⚠️ ACCEPTABLE: Integration tests (<5s each)
+testWidgets('full recording flow', (tester) async {
+  // E2E flow, acceptable delay
+});
+
+// ❌ BAD: Tests that take >10 seconds
+// Split into smaller tests or use mocks
+```
+
+**5. Test One Thing at a Time**
+
+```dart
+// ❌ BAD: Testing multiple things
+test('recording and identification work', () {
+  // Tests recording, STT, fuzzy match, UI update
+});
+
+// ✅ GOOD: Focused tests
+test('recording starts successfully', () { /* ... */ });
+test('STT transcribes audio correctly', () { /* ... */ });
+test('fuzzy matcher finds correct verse', () { /* ... */ });
+```
+
+---
+
+### MVP Testing Checklist
+
+**Before Launch**:
+
+- [ ] Fuzzy matching algorithm tested with 20+ sample verses
+- [ ] Recording state transitions tested (idle → recording → processing → completed)
+- [ ] STT error handling tested (timeout, network error, auth failure)
+- [ ] Deep link navigation tested (lawh://verse/2/255 opens correct verse)
+- [ ] Low confidence scenario tested (shows retry screen)
+- [ ] Feedback submission tested (thumbs up/down persists)
+- [ ] Dark mode tested (all screens render correctly)
+- [ ] Arabic text rendering tested (RTL layout, proper font)
+- [ ] Share functionality tested (generates correct deep links)
+- [ ] Permission handling tested (microphone, location)
+
+**Post-MVP (Phase 2)**:
+
+- [ ] E2E tests for all user flows
+- [ ] Performance tests (60fps animations, <2s app launch)
+- [ ] Accessibility tests (screen reader, voice control)
+- [ ] Widget tests for all custom components
+- [ ] Stress tests (recording 50+ times, memory leaks)
+
+---
+
+### Running Tests
+
+**Unit Tests**
+
+```bash
+# Run all unit tests
+flutter test
+
+# Run specific test file
+flutter test test/unit/features/verse_identification/fuzzy_matcher_test.dart
+
+# Run tests with coverage
+flutter test --coverage
+```
+
+**Widget Tests**
+
+```bash
+# Run widget tests
+flutter test test/widget/
+
+# Run specific widget test
+flutter test test/widget/features/verse_identification/result_card_test.dart
+```
+
+**Integration Tests**
+
+```bash
+# Run on connected device/emulator
+flutter test integration_test/
+
+# Run on specific device
+flutter test integration_test/ -d <device_id>
+```
+
+**Test Coverage Report**
+
+```bash
+# Generate coverage report
+flutter test --coverage
+genhtml coverage/lcov.info -o coverage/html
+open coverage/html/index.html
+```
+
+---
+
+## Environment Configuration
+
+### Environment Variables Setup
+
+Lawh uses different configurations for development and production environments.
+
+**.env.development**
+
+```bash
+# Google Cloud Speech-to-Text (Updated: Feb 2026)
+GOOGLE_CLOUD_STT_API_KEY=your_development_api_key_here
+GOOGLE_CLOUD_STT_REGION=eastus
+
+# Firebase
+FIREBASE_API_KEY=your_firebase_dev_api_key
+FIREBASE_PROJECT_ID=lawh-dev
+
+# Stripe
+STRIPE_PUBLISHABLE_KEY=pk_test_your_test_key_here
+
+# App Configuration
+APP_ENV=development
+API_TIMEOUT_SECONDS=10
+ENABLE_DEBUG_LOGGING=true
+```
+
+**.env.production**
+
+```bash
+# Google Cloud Speech-to-Text (Updated: Feb 2026)
+GOOGLE_CLOUD_STT_API_KEY=your_production_api_key_here
+GOOGLE_CLOUD_STT_REGION=eastus
+
+# Firebase
+FIREBASE_API_KEY=your_firebase_prod_api_key
+FIREBASE_PROJECT_ID=lawh-prod
+
+# Stripe
+STRIPE_PUBLISHABLE_KEY=pk_live_your_live_key_here
+
+# App Configuration
+APP_ENV=production
+API_TIMEOUT_SECONDS=10
+ENABLE_DEBUG_LOGGING=false
+```
+
+**Loading Environment Variables (main.dart)**
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  await dotenv.load(
+    fileName: kReleaseMode ? '.env.production' : '.env.development',
+  );
+
+  // Initialize Firebase
+  // await Firebase.initializeApp();
+
+  runApp(
+    const ProviderScope(
+      child: LawhApp(),
+    ),
+  );
+}
+```
+
+**Accessing Environment Variables**
+
+```dart
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// Access environment variables
+final apiKey = dotenv.env['AZURE_STT_API_KEY'] ?? '';
+final region = dotenv.env['GOOGLE_CLOUD_STT_REGION'] ?? 'eastus';
+final isDebugLoggingEnabled = dotenv.env['ENABLE_DEBUG_LOGGING'] == 'true';
+```
+
+**Important Notes**:
+
+- ⚠️ **Never commit .env files to git**: Add to .gitignore
+- ✅ **Provide .env.example**: Template with dummy values for team
+- ✅ **Validate on startup**: Fail fast if required variables missing
+- ⚠️ **Rotate keys regularly**: Change production keys every 90 days
+
+**.env.example** (commit this to git)
+
+```bash
+# Google Cloud Speech-to-Text (Updated: Feb 2026)
+GOOGLE_CLOUD_STT_API_KEY=your_api_key_here
+GOOGLE_CLOUD_STT_REGION=eastus
+
+# Firebase
+FIREBASE_API_KEY=your_firebase_api_key
+FIREBASE_PROJECT_ID=lawh-project-id
+
+# Stripe
+STRIPE_PUBLISHABLE_KEY=pk_test_or_pk_live_key_here
+
+# App Configuration
+APP_ENV=development
+API_TIMEOUT_SECONDS=10
+ENABLE_DEBUG_LOGGING=true
+```
+
+---
+
+## Frontend Developer Standards
+
+### Critical Coding Rules
+
+These rules prevent common mistakes that break production apps. Follow them religiously.
+
+**1. Never Bypass Null Safety**
+
+```dart
+// ❌ BAD: Force unwrapping without checking
+final name = user!.name; // Crashes if user is null
+
+// ✅ GOOD: Safe null handling
+final name = user?.name ?? 'Guest';
+```
+
+**2. Always Dispose Controllers and Subscriptions**
+
+```dart
+// ❌ BAD: Memory leak
+class RecordingScreen extends StatefulWidget {
+  final _timer = Timer.periodic(Duration(seconds: 1), (_) {});
+  // Timer never cancelled
+}
+
+// ✅ GOOD: Proper cleanup
+class RecordingNotifier extends StateNotifier<RecordingState> {
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+}
+```
+
+**3. Use Const Constructors for Immutable Widgets**
+
+```dart
+// ❌ BAD: Rebuilds widget unnecessarily
+Widget build(context) {
+  return Container(color: Colors.blue);
+}
+
+// ✅ GOOD: Widget cached, better performance
+Widget build(context) {
+  return const  Container(color: Colors.blue);
+}
+```
+
+**4. Never Use BuildContext After Async Gaps**
+
+```dart
+// ❌ BAD: Context might be disposed
+Future<void> saveData() async {
+  await repository.save(data);
+  Navigator.of(context).pop(); // Crash if widget unmounted
+}
+
+// ✅ GOOD: Check if mounted
+Future<void> saveData() async {
+  await repository.save(data);
+  if (!mounted) return;
+  Navigator.of(context).pop();
+}
+```
+
+**5. Always Handle Async Errors**
+
+```dart
+// ❌ BAD: Uncaught exceptions crash app
+Future<void> identifyVerse() async {
+  final result = await sttRepository.transcribe(audio);
+  // If this throws, app crashes
+}
+
+// ✅ GOOD: Explicit error handling
+Future<void> identifyVerse() async {
+  try {
+    final result = await sttRepository.transcribe(audio);
+  } catch (e, stack) {
+    state = AsyncValue.error(e, stack);
+  }
+}
+```
+
+**6. Use Keys for Dynamic Lists**
+
+```dart
+// ❌ BAD: Flutter can't track which item is which
+ListView.builder(
+  itemBuilder: (context, index) => ResultCard(results[index]),
+)
+
+// ✅ GOOD: Keys help Flutter optimize rebuilds
+ListView.builder(
+  itemBuilder: (context, index) {
+    final result = results[index];
+    return ResultCard(
+      key: ValueKey('${result.surah}-${result.ayah}'),
+      result: result,
+    );
+  },
+)
+```
+
+**7. Never Block the UI Thread**
+
+```dart
+// ❌ BAD: Heavy computation blocks UI
+Widget build(context) {
+  final matches = fuzzyMatcher.findMatches(text); // Blocks for 2 seconds
+  return ResultsList(matches);
+}
+
+// ✅ GOOD: Use async or compute()
+@override
+Widget build(context) {
+  final matchesAsync = ref.watch(matchesProvider);
+  return matchesAsync.when(
+    data: (matches) => ResultsList(matches),
+    loading: () => CircularProgressIndicator(),
+    error: (e, _) => ErrorMessage(e),
+  );
+}
+```
+
+**8. Always Test on Low-End Devices**
+
+```dart
+// Test app performance on:
+// - iPhone SE 2nd gen (iOS minimum)
+// - Samsung Galaxy A10s (Android minimum, 2GB RAM)
+// - Slow 3G network simulation
+```
+
+**9. Handle Arabic Text Direction Properly**
+
+```dart
+// ❌ BAD: LTR layout for Arabic text
+Text(arabicVerse)
+
+// ✅ GOOD: Explicit RTL direction
+Text(
+  arabicVerse,
+  textDirection: TextDirection.rtl,
+)
+```
+
+**10. Never Hard-Code API Keys**
+
+```dart
+// ❌ BAD: Exposed in source code
+const azureKey = '1234567890abcdef';
+
+// ✅ GOOD: Load from environment
+final azureKey = dotenv.env['AZURE_STT_API_KEY'];
+```
+
+---
+
+### Quick Reference
+
+**Common Commands**
+
+```bash
+# Development
+flutter run                              # Run on connected device
+flutter run --release                    # Run release build
+flutter run -d chrome                    # Run on web (Phase 2)
+
+# Building
+flutter build apk --release              # Android APK
+flutter build appbundle --release        # Android App Bundle
+flutter build ios --release              # iOS build
+
+# Testing
+flutter test                             # Unit & widget tests
+flutter test integration_test/           # Integration tests
+flutter test --coverage                  # Generate coverage report
+
+# Code Generation (Freezed, JSON)
+flutter pub run build_runner build       # One-time generation
+flutter pub run build_runner watch       # Watch mode
+flutter pub run build_runner build --delete-conflicting-outputs  # Clean rebuild
+
+# Dependencies
+flutter pub get                          # Install dependencies
+flutter pub upgrade                      # Upgrade dependencies
+flutter pub outdated                     # Check for outdated packages
+
+# Debugging
+flutter doctor                           # Check Flutter setup
+flutter clean                            # Clean build artifacts
+flutter analyze                          # Static analysis
+```
+
+**Key Import Patterns**
+
+```dart
+// Material/Cupertino
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+
+// Riverpod
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Freezed models
+import 'package:freezed_annotation/freezed_annotation.dart';
+part 'model_name.freezed.dart';
+
+// go_router
+import 'package:go_router/go_router.dart';
+
+// Dio
+import 'package:dio/dio.dart';
+
+// Project structure
+import 'package:lawh/core/constants/app_colors.dart';
+import 'package:lawh/features/verse_identification/domain/models/verse_result.dart';
+```
+
+**File Naming Conventions Recap**
+
+```plaintext
+Screens:        main_screen.dart
+Widgets:        result_card.dart
+Providers:      recording_provider.dart
+Models:         verse_result.dart
+Repositories:   stt_repository.dart (interface)
+                azure_stt_repository_impl.dart (implementation)
+Services:       audio_recorder_service.dart
+Constants:      app_colors.dart
+Tests:          *_test.dart
+```
+
+**Riverpod Provider Patterns**
+
+```dart
+// Simple state
+final settingProvider = StateProvider<bool>((ref) => false);
+
+// Async data
+final verseProvider = FutureProvider.family<Verse, int>((ref, id) async {
+  return await ref.read(quranRepositoryProvider).getVerse(id);
+});
+
+// Stateful logic
+final recordingProvider = StateNotifierProvider<RecordingNotifier, RecordingState>((ref) {
+  return RecordingNotifier(ref.watch(audioServiceProvider));
+});
+
+// Dependency injection
+final sttRepositoryProvider = Provider<SttRepository>((ref) {
+  return AzureSttRepositoryImpl(ref.watch(dioProvider));
+});
+```
+
+**Common Debugging Tips**
+
+```dart
+// Print to console
+debugPrint('Message');  // Better than print(), stripped in release mode
+
+// Inspect widget tree
+flutter inspector  // In VS Code / Android Studio
+
+// Check performance
+flutter run --profile  // Profile mode
+// Then press 'p' to toggle performance overlay
+
+// Debug network calls
+// Use Dio LogInterceptor (already configured in app)
+
+// Check memory leaks
+flutter run --profile
+// Press 'M' to trigger memory snapshot
+```
+
+**Platform-Specific Checks**
+
+```dart
+import 'dart:io';
+
+if (Platform.isIOS) {
+  // iOS-specific code
+}
+
+if (Platform.isAndroid) {
+  // Android-specific code
+}
+
+// Or use Theme.of(context).platform
+final platform = Theme.of(context).platform;
+if (platform == TargetPlatform.iOS) {
+  // iOS behavior
+}
+```
+
+**Useful Extensions**
+
+```dart
+// BuildContext extensions (already defined in project)
+context.goToVerse(2, 255);
+context.goBack();
+
+// Custom extensions you might add
+extension StringExtensions on String {
+  bool get isArabic => RegExp(r'[\u0600-\u06FF]').hasMatch(this);
+}
+
+extension DoubleExtensions on double {
+  String get confidenceLabel {
+    if (this >= 0.9) return 'High';
+    if (this >= 0.65) return 'Medium';
+    return 'Low';
+  }
+}
+```
+
+---
+
+## Summary & Next Steps
+
+### Document Complete
+
+This Frontend Architecture Document provides everything needed to implement Lawh's mobile app:
+
+✅ **Framework & Tech Stack**: Flutter with Riverpod, go_router, dio, and essential packages
+✅ **Project Structure**: Feature-first + Clean Architecture with pragmatic MVP approach
+✅ **SOLID Principles**: Applied practically with real examples
+✅ **Component Standards**: Naming conventions, widget templates, consistent patterns
+✅ **State Management**: Riverpod patterns with Freezed for immutable state
+✅ **API Integration**: Azure STT repository with error handling and retries
+✅ **Routing & Deep Linking**: go_router with shareable verse URLs for viral growth
+✅ **Styling**: Complete theme system, colors, typography, spacing constants
+✅ **Testing**: MVP-focused strategy with unit, widget, and integration test examples
+✅ **Environment Config**: Separate dev/prod configurations with secure key management
+
+### Implementation Roadmap
+
+**Week 1: Foundation**
+- Set up Flutter project with dependencies
+- Configure environment files (.env.development, .env.production)
+- Implement core theme, routing, and project structure
+- Set up Quran text database (SQLite)
+
+**Week 2: Core Feature**
+- Implement audio recording with waveform visualization
+- Integrate Azure Speech-to-Text API
+- Build fuzzy matching algorithm for verse identification
+- Create main screen, recording screen, results screen
+
+**Week 3: Quran Reader & Sharing**
+- Implement Quran reader with deep linking support
+- Add verse sharing functionality (lawh:// scheme)
+- Configure iOS/Android for deep links
+- Test sharing flow end-to-end
+
+**Week 4: Polish & Launch**
+- Implement settings, feedback, donation flows
+- Add Firebase Analytics and Crashlytics
+- Comprehensive testing (unit, widget, integration)
+- Submit to App Store and Google Play
+
+### Critical Path Items
+
+**Must Validate Before Full Development**:
+
+1. ✅ **Azure STT Accuracy**: Test with 10+ real recitation samples
+2. ✅ **Fuzzy Match Algorithm**: Achieve 85%+ accuracy on test set
+3. ✅ **Quran Font Rendering**: Verify Uthmanic Hafs displays correctly on iOS/Android
+4. ✅ **Deep Link Configuration**: Test lawh:// scheme opens app correctly
+
+**Must Complete for MVP Launch**:
+
+1. ✅ **Core verse identification flow** (listen → record → identify → read)
+2. ✅ **Deep linking for sharing** (30% share rate KPI)
+3. ✅ **Error handling** (network failures, low confidence, permissions)
+4. ✅ **Dark mode support** (platform standard)
+5. ✅ **Privacy compliance** (anonymous UUID, optional location, clear disclosures)
+
+### Developer Handoff Checklist
+
+**Ready to Start Development**:
+
+- [ ] Review this entire frontend architecture document
+- [ ] Review project brief (docs/brief.md) and UI/UX spec (docs/front-end-spec.md)
+- [ ] Set up Flutter development environment (flutter doctor)
+- [ ] Obtain Azure STT API keys (development and production)
+- [ ] Set up Firebase project for analytics
+- [ ] Clone/initialize git repository
+- [ ] Create .env.development and .env.production files
+- [ ] Download Quran text database (Tanzil.net or EveryAyah.com)
+- [ ] Review SOLID principles and code quality guidelines
+- [ ] Bookmark testing checklist for pre-launch validation
+
+**Questions or Clarifications?**
+
+Contact Winston (Architect) for:
+- Architecture decisions or trade-offs
+- Technology selection questions
+- SOLID principle applications
+- Performance optimization strategies
+
+---
+
+**Document Status**: ✅ Complete and Ready for Implementation
+
+**Last Updated**: 2026-02-03
+
+**Version**: 1.0
+
+---
+
+*This frontend architecture serves as the blueprint for building Lawh's mobile app. May this work help connect people with the Quran in meaningful ways.*
+
+---

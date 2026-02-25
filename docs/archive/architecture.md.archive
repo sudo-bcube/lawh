@@ -1,0 +1,1015 @@
+# Lawh Architecture Document
+
+## Introduction
+
+This document outlines the overall project architecture for **Lawh**, including backend systems, shared services, and non-UI specific concerns. Its primary goal is to serve as the guiding architectural blueprint for AI-driven development, ensuring consistency and adherence to chosen patterns and technologies.
+
+**Relationship to Frontend Architecture:**
+If the project includes a significant user interface, a separate Frontend Architecture Document will detail the frontend-specific design and MUST be used in conjunction with this document. Core technology stack choices documented herein (see "Tech Stack") are definitive for the entire project, including any frontend components.
+
+### Starter Template or Existing Project
+
+**Decision:** Greenfield project using full-featured starter templates
+
+- **Backend:** FastAPI Full Stack Template (Tiangolo's) - SQLAlchemy, Alembic, JWT ready
+- **Mobile:** Standard Flutter with Riverpod - Clean architecture, reactive state management
+
+**Rationale:**
+- 4-week timeline benefits from pre-configured infrastructure
+- Templates handle boilerplate so focus stays on business logic (fuzzy matching, STT integration)
+- Battle-tested patterns reduce risk
+
+### Change Log
+
+| Date | Version | Description | Author |
+|------|---------|-------------|--------|
+| 2026-02-10 | 1.0 | Initial architecture document creation | Winston (Architect) |
+
+---
+
+## High Level Architecture
+
+### Technical Summary
+
+Lawh is a **monolithic backend with mobile client** architecture designed for rapid MVP delivery. The system uses a Python FastAPI backend that orchestrates **Google Cloud Speech-to-Text** transcription and performs fuzzy matching against a locally-stored Quran text database. Flutter mobile clients (iOS/Android) handle audio recording and present results through a clean, culturally-appropriate interface. The architecture prioritizes simplicity, cost efficiency (<$20/month infrastructure), and fast iteration - supporting the core PRD goals of 85%+ verse identification accuracy and <5 second end-to-end response time.
+
+### High Level Overview
+
+1. **Architectural Style:** Monolithic Backend with REST API
+2. **Repository Structure:** Monorepo (as specified in PRD)
+   ```
+   lawh/
+   ├── mobile/          # Flutter mobile app (Riverpod + Clean Architecture)
+   ├── backend/         # Python FastAPI (Full Stack Template)
+   ├── shared/          # Shared assets (Quran data, constants)
+   ├── docs/            # Documentation
+   └── scripts/         # Build, deployment, utilities
+   ```
+3. **Service Architecture:** Single FastAPI service handling all business logic
+4. **Primary Data Flow:**
+   - User records audio → Mobile app sends to backend
+   - Backend calls **Google Cloud STT** → Receives pure Arabic transcription
+   - Backend runs fuzzy matching against local Quran DB
+   - Results with confidence scores returned to mobile
+5. **Key Decision - Google over Azure:** Testing revealed Google STT returns pure Arabic text while Azure mixed in English words - critical for accurate verse matching
+6. **Audio Flow Decision:** Audio routed through backend (Option A) for API key security and future training data collection
+
+### High Level Project Diagram
+
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        iOS[iOS App<br/>Flutter]
+        Android[Android App<br/>Flutter]
+    end
+
+    subgraph "API Layer"
+        API[FastAPI Backend<br/>DigitalOcean Droplet]
+    end
+
+    subgraph "External Services"
+        Google[Google Cloud<br/>Speech-to-Text]
+        Stripe[Stripe Payments]
+    end
+
+    subgraph "Data Layer"
+        PG[(PostgreSQL<br/>Users, Searches,<br/>Feedback)]
+        JSON[(Quran JSON<br/>In-Memory)]
+    end
+
+    iOS -->|HTTPS/REST| API
+    Android -->|HTTPS/REST| API
+    API -->|Audio Stream| Google
+    Google -->|Pure Arabic<br/>Transcription| API
+    API -->|Payment API| Stripe
+    API -->|CRUD| PG
+    API -->|Read| JSON
+```
+
+### Architectural and Design Patterns
+
+| Pattern | Choice | Rationale |
+|---------|--------|-----------|
+| **API Style** | REST with JSON | Simple, well-understood, sufficient for MVP scope. GraphQL adds unnecessary complexity. |
+| **Backend Structure** | Layered Architecture (Router → Service → Repository) | Clear separation of concerns, testable, matches FastAPI Full Stack Template structure. |
+| **State Management (Mobile)** | Riverpod | Compile-safe, testable, no BuildContext dependency, excellent for async STT operations. |
+| **Data Access** | Repository Pattern with SQLAlchemy ORM | Abstracts database operations, enables testing with mocks, future migration flexibility. |
+| **Authentication** | Anonymous UUID (device-generated) | Privacy-first per PRD requirements, no user accounts for MVP. |
+| **Error Handling** | Result/Either Pattern | Explicit error handling, no silent failures, clear error propagation. |
+| **Configuration** | Environment Variables + Pydantic Settings | Secure secrets management, type-safe configuration, 12-factor app compliance. |
+
+---
+
+## Tech Stack
+
+### Cloud Infrastructure
+
+- **Provider:** Google Cloud Platform (GCP) + DigitalOcean
+- **Key Services:**
+  - Google Cloud Speech-to-Text (transcription)
+  - DigitalOcean Droplet (backend hosting)
+  - DigitalOcean Managed PostgreSQL (database)
+- **Deployment Regions:** US East (primary)
+
+### Technology Stack Table
+
+| Category | Technology | Version | Purpose | Rationale |
+|----------|------------|---------|---------|-----------|
+| **Mobile Framework** | Flutter | 3.24.x | Cross-platform iOS/Android | Single codebase, PRD requirement |
+| **Mobile Language** | Dart | 3.5.x | Mobile app development | Flutter's language |
+| **Mobile Architecture** | Riverpod + Clean Arch | 2.5+ | State management & structure | Compile-safe, async-friendly, testable |
+| **Backend Framework** | FastAPI | 0.115.x | REST API | Async, fast, Python ecosystem |
+| **Backend Language** | Python | 3.12 | Backend development | Latest stable, better performance |
+| **Backend Template** | Tiangolo Full Stack | Latest | Project scaffolding | SQLAlchemy, Alembic, JWT ready |
+| **Database** | PostgreSQL | 16 | Primary data store | Users, searches, feedback |
+| **Quran Text Storage** | JSON files | N/A | Verse data | In-memory loading, <50ms lookup |
+| **ORM** | SQLAlchemy | 2.0.x | Database access | Async support, migrations via Alembic |
+| **Speech-to-Text** | Google Cloud STT | v1 | Arabic transcription | Pure Arabic output, tested accuracy |
+| **Payments** | Stripe | Latest API | Sadaqah donations | International support |
+| **Backend Hosting (Primary)** | DigitalOcean Droplet | $6/month | API server | Cost-effective |
+| **Backend Hosting (Fallback)** | Heroku Eco | $7/month | Backup hosting | Easy deployment if DO issues |
+| **Database Hosting** | DigitalOcean Managed PostgreSQL | $15/month | Managed DB | Automated backups |
+| **CI/CD** | GitHub Actions | N/A | Automated testing/deployment | Free, integrated |
+| **Mobile Builds** | Codemagic | Free tier | iOS/Android builds | Flutter-specialized |
+| **Monitoring** | Sentry | Free tier | Error tracking | PRD requirement |
+| **Analytics** | Firebase Analytics | Free | Usage tracking | PRD requirement |
+
+---
+
+## Data Models
+
+### User
+
+**Purpose:** Track anonymous users via device-generated UUID for linking searches and feedback without personal identification.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `id` | UUID (PK) | Server-generated internal ID |
+| `device_uuid` | String (unique) | Device-generated anonymous UUID |
+| `device_type` | Enum | `ios`, `android`, `web` |
+| `app_version` | String | App version at registration |
+| `location_consent` | Boolean | User opted into location tracking |
+| `created_at` | Timestamp | First app launch |
+| `last_active_at` | Timestamp | Most recent activity |
+
+**Relationships:**
+- Has many `Search` records
+- Has many `Feedback` records
+- Has many `Donation` records
+
+### Search
+
+**Purpose:** Record every verse identification attempt for analytics and algorithm improvement.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `id` | UUID (PK) | Unique search identifier |
+| `user_id` | UUID (FK) | Link to User |
+| `transcription` | Text | Google STT output (Arabic text) |
+| `audio_duration_ms` | Integer | Recording length (10,000-15,000ms) |
+| `audio_quality_score` | Float (nullable) | Client-side quality assessment |
+| `top_result_surah` | Integer (nullable) | Best match surah number |
+| `top_result_ayah` | Integer (nullable) | Best match ayah number |
+| `confidence_score` | Float | Algorithm confidence (0.0-1.0) |
+| `results_count` | Integer | Number of results shown (0, 1, 2, or 3) |
+| `results_json` | JSONB | Full results array with scores |
+| `processing_time_ms` | Integer | Total backend processing time |
+| `stt_time_ms` | Integer | Google STT response time |
+| `matching_time_ms` | Integer | Fuzzy matching time |
+| `city` | String (nullable) | IP-based geolocation at search time |
+| `region` | String (nullable) | IP-based geolocation at search time |
+| `country_code` | String (nullable) | IP-based geolocation at search time |
+| `created_at` | Timestamp | Search timestamp |
+
+**Relationships:**
+- Belongs to `User`
+- Has one `Feedback` record (optional)
+
+### Feedback
+
+**Purpose:** Capture explicit and implicit user feedback on search results.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `id` | UUID (PK) | Unique feedback identifier |
+| `search_id` | UUID (FK, unique) | Link to Search (1:1) |
+| `user_id` | UUID (FK) | Link to User |
+| `explicit_rating` | Enum (nullable) | `thumbs_up`, `thumbs_down`, `none_correct` |
+| `clicked_result_index` | Integer (nullable) | Which result user tapped (0, 1, 2) |
+| `time_on_results_ms` | Integer | Time spent viewing results |
+| `opened_quran_reader` | Boolean | Did user open the Quran reader? |
+| `created_at` | Timestamp | Feedback timestamp |
+
+**Relationships:**
+- Belongs to `Search` (one-to-one)
+- Belongs to `User`
+
+### Donation
+
+**Purpose:** Track Sadaqah donations for sustainability monitoring.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `id` | UUID (PK) | Unique donation identifier |
+| `user_id` | UUID (FK) | Link to User |
+| `stripe_payment_id` | String | Stripe payment intent ID |
+| `amount_cents` | Integer | Donation amount in cents |
+| `currency` | String | Currency code (USD, GBP, etc.) |
+| `status` | Enum | `pending`, `completed`, `failed`, `refunded` |
+| `created_at` | Timestamp | Donation initiated |
+| `completed_at` | Timestamp (nullable) | Payment confirmed |
+
+**Relationships:**
+- Belongs to `User`
+
+### QuranVerse (JSON Structure - Not in DB)
+
+**Purpose:** In-memory Quran text for fuzzy matching. Loaded from JSON file at startup.
+
+```json
+{
+  "verses": [
+    {
+      "surah": 1,
+      "ayah": 1,
+      "text_uthmani": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+      "text_simple": "بسم الله الرحمن الرحيم",
+      "text_no_diacritics": "بسم الله الرحمن الرحيم"
+    }
+  ],
+  "metadata": {
+    "source": "tanzil.net",
+    "version": "Uthmani",
+    "total_verses": 6236,
+    "downloaded_at": "2026-02-10"
+  }
+}
+```
+
+### Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    USER ||--o{ SEARCH : makes
+    USER ||--o{ DONATION : gives
+    SEARCH ||--o| FEEDBACK : receives
+    USER ||--o{ FEEDBACK : provides
+
+    USER {
+        uuid id PK
+        string device_uuid UK
+        enum device_type
+        boolean location_consent
+        timestamp created_at
+    }
+
+    SEARCH {
+        uuid id PK
+        uuid user_id FK
+        text transcription
+        real confidence_score
+        jsonb results_json
+        varchar city
+        varchar country_code
+        timestamp created_at
+    }
+
+    FEEDBACK {
+        uuid id PK
+        uuid search_id FK
+        uuid user_id FK
+        enum explicit_rating
+        int clicked_result_index
+        boolean opened_quran_reader
+    }
+
+    DONATION {
+        uuid id PK
+        uuid user_id FK
+        varchar stripe_payment_id UK
+        int amount_cents
+        enum status
+    }
+```
+
+---
+
+## Components
+
+### Mobile App (Flutter)
+
+**Responsibility:** Handle user interactions, audio recording, result display, and Quran reading experience.
+
+**Key Interfaces:**
+- REST API client for backend communication
+- Google Firebase SDK for analytics
+- Device audio recording APIs
+- Local storage for anonymous UUID
+
+**Dependencies:** Backend API, Firebase Analytics
+
+**Technology Stack:** Flutter 3.24.x, Dart 3.5.x, Riverpod, Clean Architecture
+
+**Internal Structure (Feature-First Clean Architecture):**
+```
+mobile/
+├── lib/
+│   ├── app/                    # App configuration, routing
+│   ├── features/
+│   │   ├── recording/          # Audio capture feature
+│   │   ├── results/            # Search results display
+│   │   ├── quran_reader/       # In-app Quran viewer
+│   │   ├── feedback/           # Thumbs up/down, ratings
+│   │   ├── donation/           # Sadaqah/Stripe integration
+│   │   └── settings/           # User preferences
+│   ├── core/
+│   │   ├── api/                # Backend API client
+│   │   ├── models/             # Data models
+│   │   └── utils/              # Helpers, constants
+│   └── l10n/                   # Localization
+```
+
+### Backend API (FastAPI)
+
+**Responsibility:** Orchestrate STT transcription, execute fuzzy matching, manage user data, process donations.
+
+**Key Interfaces:**
+- `POST /api/v1/search` - Audio upload and verse identification
+- `POST /api/v1/feedback` - Submit search feedback
+- `GET /api/v1/quran/{surah}/{ayah}` - Retrieve verse text
+- `POST /api/v1/donations` - Create Stripe payment intent
+- `GET /api/v1/health` - Health check endpoint
+
+**Dependencies:** Google Cloud STT, PostgreSQL, Stripe API, Quran JSON data
+
+**Technology Stack:** Python 3.12, FastAPI 0.115.x, SQLAlchemy 2.0, Pydantic
+
+**Internal Structure (Layered Architecture):**
+```
+backend/
+├── app/
+│   ├── api/v1/endpoints/       # HTTP layer
+│   ├── core/                   # Config, security, dependencies
+│   ├── services/               # Business logic (STT, matching, payments)
+│   ├── repositories/           # Data access layer
+│   ├── models/
+│   │   ├── domain/             # SQLAlchemy models
+│   │   └── schemas/            # Pydantic schemas
+│   └── data/quran.json         # Quran text
+```
+
+### Component Diagram
+
+```mermaid
+graph TB
+    subgraph "Mobile App (Flutter)"
+        UI[UI Layer<br/>Screens & Widgets]
+        Providers[Riverpod Providers<br/>State Management]
+        API_Client[API Client<br/>REST Communication]
+    end
+
+    subgraph "Backend API (FastAPI)"
+        Router[API Router<br/>Endpoints]
+        Services[Service Layer]
+        Repos[Repository Layer]
+
+        subgraph "Services"
+            STT[STT Service]
+            Match[Matching Service]
+            Quran[Quran Service]
+            Pay[Stripe Service]
+        end
+    end
+
+    subgraph "External"
+        Google[Google Cloud STT]
+        Stripe[Stripe API]
+    end
+
+    subgraph "Data"
+        PG[(PostgreSQL)]
+        JSON[(Quran JSON<br/>In-Memory)]
+    end
+
+    UI --> Providers
+    Providers --> API_Client
+    API_Client -->|HTTPS| Router
+    Router --> Services
+    Services --> Repos
+    STT -->|API Call| Google
+    Pay -->|API Call| Stripe
+    Match --> JSON
+    Quran --> JSON
+    Repos --> PG
+```
+
+---
+
+## External APIs
+
+### Google Cloud Speech-to-Text API
+
+- **Purpose:** Transcribe Arabic Quranic audio recordings to text
+- **Documentation:** https://cloud.google.com/speech-to-text/docs
+- **Base URL:** `https://speech.googleapis.com/v1/speech:recognize`
+- **Authentication:** Service Account JSON key
+- **Rate Limits:** Default 300 requests/minute
+
+**Request Configuration:**
+```json
+{
+  "config": {
+    "encoding": "LINEAR16",
+    "sampleRateHertz": 16000,
+    "languageCode": "ar-SA",
+    "enableAutomaticPunctuation": true,
+    "model": "default",
+    "useEnhanced": true
+  },
+  "audio": {
+    "content": "<base64-encoded-audio>"
+  }
+}
+```
+
+### Stripe API
+
+- **Purpose:** Process Sadaqah (voluntary donation) payments
+- **Documentation:** https://stripe.com/docs/api
+- **Base URL:** `https://api.stripe.com/v1`
+- **Authentication:** Secret key (server-side), Publishable key (client-side)
+
+**Key Endpoints:**
+- `POST /v1/payment_intents` - Create payment intent
+- `POST /v1/webhooks` - Receive payment confirmation events
+
+### Tanzil.net (One-Time Data Source)
+
+- **Purpose:** Source for Quran text database (Uthmani script)
+- **Documentation:** https://tanzil.net/download/
+- **License:** Creative Commons Attribution 3.0 (requires attribution in app)
+- **Usage:** Downloaded once during setup, stored as JSON
+
+---
+
+## Core Workflows
+
+### Workflow 1: Verse Identification (Primary User Journey)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant App as Mobile App
+    participant API as FastAPI Backend
+    participant STT as Google Cloud STT
+    participant Match as Matching Service
+    participant DB as PostgreSQL
+
+    User->>App: Tap "Record" button
+    App->>App: Start audio recording (10-15 seconds)
+    User->>App: Recording completes
+
+    App->>App: Validate audio (duration, volume)
+    App->>API: POST /api/v1/search (audio bytes)
+
+    API->>STT: Send audio for transcription
+    STT-->>API: Return Arabic transcription
+
+    API->>Match: find_matches(transcription)
+    Match-->>API: Return ranked results
+
+    API->>DB: Save Search record
+    API-->>App: Return results with confidence
+
+    alt Confidence ≥90%
+        App->>User: Show 1 result
+    else Confidence 65-89%
+        App->>User: Show 2-3 results
+    else Confidence <65%
+        App->>User: "Could not identify verse"
+    end
+```
+
+### Workflow 2: Feedback Submission
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant App as Mobile App
+    participant API as FastAPI Backend
+    participant DB as PostgreSQL
+
+    alt User taps a result
+        User->>App: Tap verse result
+        App->>API: POST /api/v1/feedback (implicit)
+        API->>DB: Save Feedback
+        App->>App: Navigate to Quran Reader
+    else User taps thumbs up/down
+        User->>App: Tap feedback button
+        App->>API: POST /api/v1/feedback (explicit)
+        API->>DB: Save Feedback
+        App->>User: "Thank you!"
+    end
+```
+
+### Workflow 3: Sadaqah Donation
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant App as Mobile App
+    participant API as FastAPI Backend
+    participant Stripe as Stripe API
+    participant DB as PostgreSQL
+
+    User->>App: Tap "Support Lawh (Sadaqah)"
+    User->>App: Select amount
+
+    App->>API: POST /api/v1/donations
+    API->>Stripe: Create PaymentIntent
+    Stripe-->>API: Return client_secret
+    API->>DB: Save Donation (pending)
+    API-->>App: Return client_secret
+
+    App->>Stripe: Confirm payment (via SDK)
+    Stripe->>API: Webhook: payment_intent.succeeded
+    API->>DB: Update Donation (completed)
+    App->>User: "JazakAllahu Khayran!"
+```
+
+---
+
+## REST API Spec
+
+### Endpoints Summary
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/search` | POST | Verse identification |
+| `/api/v1/feedback` | POST | Submit feedback |
+| `/api/v1/quran/{surah}/{ayah}` | GET | Get single verse |
+| `/api/v1/quran/{surah}` | GET | Get full surah |
+| `/api/v1/donations` | POST | Create payment |
+| `/api/v1/donations/webhook` | POST | Stripe webhook |
+| `/api/v1/health` | GET | Health check |
+
+### Search Response Schema
+
+```json
+{
+  "search_id": "uuid",
+  "transcription": "Arabic text from STT",
+  "confidence": 0.92,
+  "results_count": 1,
+  "results": [
+    {
+      "surah": 1,
+      "ayah": 1,
+      "text_uthmani": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+      "confidence_score": 0.92,
+      "surah_name_arabic": "الفاتحة",
+      "surah_name_english": "Al-Fatihah"
+    }
+  ],
+  "processing_time_ms": 3200
+}
+```
+
+---
+
+## Database Schema
+
+```sql
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ENUM TYPES
+CREATE TYPE device_type AS ENUM ('ios', 'android', 'web');
+CREATE TYPE feedback_rating AS ENUM ('thumbs_up', 'thumbs_down', 'none_correct');
+CREATE TYPE donation_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
+
+-- USERS TABLE
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    device_uuid VARCHAR(36) NOT NULL UNIQUE,
+    device_type device_type NOT NULL,
+    app_version VARCHAR(20) NOT NULL,
+    location_consent BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    last_active_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- SEARCHES TABLE
+CREATE TABLE searches (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    transcription TEXT NOT NULL,
+    audio_duration_ms INTEGER NOT NULL CHECK (audio_duration_ms BETWEEN 10000 AND 15000),
+    audio_quality_score REAL,
+    top_result_surah SMALLINT CHECK (top_result_surah BETWEEN 1 AND 114),
+    top_result_ayah SMALLINT,
+    confidence_score REAL NOT NULL CHECK (confidence_score BETWEEN 0.0 AND 1.0),
+    results_count SMALLINT NOT NULL CHECK (results_count BETWEEN 0 AND 3),
+    results_json JSONB NOT NULL DEFAULT '[]',
+    processing_time_ms INTEGER NOT NULL,
+    stt_time_ms INTEGER NOT NULL,
+    matching_time_ms INTEGER NOT NULL,
+    city VARCHAR(100),
+    region VARCHAR(100),
+    country_code CHAR(2),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- FEEDBACK TABLE
+CREATE TABLE feedback (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    search_id UUID NOT NULL UNIQUE REFERENCES searches(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    explicit_rating feedback_rating,
+    clicked_result_index SMALLINT CHECK (clicked_result_index BETWEEN 0 AND 2),
+    time_on_results_ms INTEGER,
+    opened_quran_reader BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- DONATIONS TABLE
+CREATE TABLE donations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    stripe_payment_id VARCHAR(255) NOT NULL UNIQUE,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    currency CHAR(3) NOT NULL DEFAULT 'usd',
+    status donation_status NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- INDEXES
+CREATE INDEX idx_users_device_uuid ON users(device_uuid);
+CREATE INDEX idx_searches_user_id ON searches(user_id);
+CREATE INDEX idx_searches_created_at ON searches(created_at);
+CREATE INDEX idx_searches_confidence ON searches(confidence_score);
+CREATE INDEX idx_feedback_search_id ON feedback(search_id);
+CREATE INDEX idx_donations_user_id ON donations(user_id);
+CREATE INDEX idx_donations_status ON donations(status);
+```
+
+---
+
+## Source Tree
+
+```
+lawh/
+├── .github/
+│   └── workflows/
+│       ├── backend-ci.yml
+│       ├── mobile-ci.yml
+│       └── deploy.yml
+│
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/
+│   │   │   ├── endpoints/
+│   │   │   │   ├── search.py
+│   │   │   │   ├── feedback.py
+│   │   │   │   ├── quran.py
+│   │   │   │   ├── donations.py
+│   │   │   │   └── health.py
+│   │   │   └── router.py
+│   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   ├── security.py
+│   │   │   └── dependencies.py
+│   │   ├── services/
+│   │   │   ├── stt_service.py
+│   │   │   ├── matching_service.py
+│   │   │   ├── quran_service.py
+│   │   │   ├── stripe_service.py
+│   │   │   └── geolocation_service.py
+│   │   ├── repositories/
+│   │   ├── models/
+│   │   │   ├── domain/
+│   │   │   └── schemas/
+│   │   ├── data/quran.json
+│   │   └── main.py
+│   ├── alembic/
+│   ├── tests/
+│   │   ├── unit/
+│   │   └── integration/
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── requirements.txt
+│   └── pyproject.toml
+│
+├── mobile/
+│   ├── lib/
+│   │   ├── app/
+│   │   ├── features/
+│   │   │   ├── recording/
+│   │   │   ├── results/
+│   │   │   ├── quran_reader/
+│   │   │   ├── feedback/
+│   │   │   ├── donation/
+│   │   │   └── settings/
+│   │   ├── core/
+│   │   │   ├── api/
+│   │   │   ├── models/
+│   │   │   └── utils/
+│   │   └── l10n/
+│   ├── test/
+│   ├── ios/
+│   ├── android/
+│   ├── pubspec.yaml
+│   └── analysis_options.yaml
+│
+├── shared/
+│   └── quran/
+│       └── quran-uthmani.xml
+│
+├── scripts/
+│   ├── setup_quran_data.py
+│   ├── test_google_stt.dart
+│   └── accuracy_test_suite.dart
+│
+├── docs/
+│   ├── prd/
+│   ├── architecture.md
+│   └── stories/
+│
+├── infrastructure/
+│   ├── environments/
+│   │   ├── staging/
+│   │   └── production/
+│   └── modules/
+│
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+---
+
+## Infrastructure and Deployment
+
+### Infrastructure as Code
+
+- **Tool:** Terraform 1.7.x
+- **Location:** `infrastructure/`
+- **State:** DigitalOcean Spaces (S3-compatible)
+
+**Resources:**
+
+| Resource | Staging | Production |
+|----------|---------|------------|
+| DigitalOcean Droplet | $6/month | $12/month |
+| Managed PostgreSQL | $15/month | $15/month |
+| DigitalOcean Spaces | $5/month | $5/month |
+| **Total** | **$26/month** | **$32/month** |
+
+### Deployment Strategy
+
+- **Strategy:** Rolling Update
+- **CI/CD Platform:** GitHub Actions
+- **Mobile Builds:** Codemagic
+
+### Environments
+
+| Environment | Purpose | URL |
+|-------------|---------|-----|
+| Local | Development | `http://localhost:8000` |
+| Staging | Pre-production | `https://staging-api.lawh.app` |
+| Production | Live users | `https://api.lawh.app` |
+
+### Environment Promotion Flow
+
+```
+Local → Staging → Production
+(Feature branch) → (main branch, auto-deploy) → (Tagged release, manual approval)
+```
+
+### Rollback Strategy
+
+- **Primary Method:** Git revert + redeploy
+- **Recovery Time Objective:** 15 minutes
+- **Database:** Alembic migrations are reversible, daily backups retained 30 days
+
+### Fallback Hosting
+
+If DigitalOcean has issues, deploy to Heroku Eco ($7/month) + Mini PostgreSQL ($5/month).
+
+---
+
+## Error Handling Strategy
+
+### General Approach
+
+- **Error Model:** Structured error responses with codes and messages
+- **Exception Hierarchy:** Custom `LawhException` base class
+- **Error Propagation:** Exceptions bubble up to API layer
+
+**Standard Error Response:**
+```json
+{
+  "error_code": "STT_ERROR",
+  "message": "Voice recognition service temporarily unavailable",
+  "details": {},
+  "request_id": "abc-123"
+}
+```
+
+### Logging Standards
+
+- **Library:** `structlog` 24.x (JSON format)
+- **Levels:** DEBUG, INFO, WARNING, ERROR, CRITICAL
+- **Required Context:** `request_id`, `service`, `environment`, `event`, `duration_ms`
+
+### Error Handling Patterns
+
+**External API Errors:**
+- Retry: Exponential backoff, max 2 retries
+- Circuit Breaker: Open after 5 failures, half-open after 30s
+- Timeouts: Google STT 30s, Stripe 15s
+
+**Error Code Registry:**
+
+| Code | HTTP | Description |
+|------|------|-------------|
+| `AUDIO_TOO_SHORT` | 400 | Recording under 10 seconds |
+| `AUDIO_TOO_LONG` | 400 | Recording over 15 seconds |
+| `STT_ERROR` | 503 | Google STT unavailable |
+| `MATCH_NONE` | 200 | No verse matched |
+| `PAY_DECLINED` | 402 | Payment declined |
+
+---
+
+## Coding Standards
+
+### Core Standards
+
+- **Backend:** Python 3.12, `ruff` + `mypy`
+- **Mobile:** Dart 3.5.x, `very_good_analysis`
+- **Test Organization:** `tests/unit/` and `tests/integration/`
+
+### Critical Rules
+
+| Rule | Description |
+|------|-------------|
+| **No print statements** | Use `structlog` logger |
+| **No hardcoded secrets** | All secrets via environment variables |
+| **Arabic text handling** | Always use UTF-8 encoding |
+| **Quran text is read-only** | Never modify `quran.json` at runtime |
+| **No raw SQL** | Use SQLAlchemy ORM/queries |
+| **API responses use schemas** | All endpoints return Pydantic models |
+| **Async all the way** | Backend uses `async def` |
+| **Riverpod for state** | Mobile features use Riverpod providers |
+
+---
+
+## Test Strategy and Standards
+
+### Testing Philosophy
+
+- **Approach:** Test-after for MVP speed
+- **Coverage Goals:**
+  - Matching algorithm: **90%+**
+  - Backend overall: **80%+**
+  - Mobile: **70%+**
+
+### Test Types
+
+| Type | Framework | Location | Purpose |
+|------|-----------|----------|---------|
+| Unit | pytest | `tests/unit/` | Services, repositories |
+| Integration | pytest + testcontainers | `tests/integration/` | API + DB |
+| E2E | Manual (MVP) | N/A | Critical user journeys |
+| Mobile Unit | flutter_test + mockito | `test/` | Provider logic |
+
+### Test Data Management
+
+- **Strategy:** Factory pattern
+- **Fixtures:** `tests/fixtures/`
+- **Cleanup:** Transaction rollback between tests
+
+---
+
+## Security
+
+### Input Validation
+
+- **Library:** Pydantic v2
+- **Location:** API boundary (request models)
+- **Approach:** Whitelist validation
+
+### Authentication & Authorization
+
+- **Method:** Anonymous device UUID
+- **Rate Limiting:** 30 searches/minute per device
+
+### Secrets Management
+
+- **Development:** `.env` file (gitignored)
+- **Production:** DigitalOcean environment variables
+
+### API Security
+
+- **HTTPS:** Enforced on all endpoints
+- **CORS:** Restricted to production domains
+- **Security Headers:** X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
+
+### Data Protection
+
+- **Encryption at Rest:** DO Managed PostgreSQL (encrypted)
+- **Encryption in Transit:** TLS 1.2+
+- **PII:** No names, emails, phone numbers collected
+- **Logging:** Never log full UUIDs, transcriptions, or IPs
+
+### Dependency Security
+
+- **Scanning:** `pip-audit`, `gitleaks`
+- **Update Policy:** Patch critical CVEs within 7 days
+
+---
+
+## Checklist Results Report
+
+### Executive Summary
+
+| Aspect | Rating |
+|--------|--------|
+| **Overall Architecture Readiness** | **HIGH** |
+| **Project Type** | Full-stack (Backend + Mobile) |
+| **Approval Status** | ✅ **APPROVED FOR DEVELOPMENT** |
+
+**Overall Score: 97%**
+
+### Section Pass Rates
+
+| Section | Pass Rate | Status |
+|---------|-----------|--------|
+| 1. Requirements Alignment | 95% | ✅ Pass |
+| 2. Architecture Fundamentals | 100% | ✅ Pass |
+| 3. Technical Stack | 95% | ✅ Pass |
+| 4. Frontend Design | 95% | ✅ Pass (see ui-architecture.md) |
+| 5. Resilience & Operations | 95% | ✅ Pass |
+| 6. Security & Compliance | 100% | ✅ Pass |
+| 7. Implementation Guidance | 95% | ✅ Pass |
+| 8. Dependencies & Integration | 100% | ✅ Pass |
+| 9. AI Agent Suitability | 100% | ✅ Pass |
+
+### Key Strengths
+
+- Clear, well-documented architecture with Mermaid diagrams
+- Specific technology versions defined (not ranges)
+- Comprehensive security controls (encryption, validation, rate limiting)
+- Excellent AI agent implementation suitability
+- Strong alignment with PRD requirements
+
+### Risks Identified
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| Google STT cost overrun | Low | $20/month quota in GCP Console |
+| Matching algorithm accuracy | Medium | 90%+ test coverage required |
+| Single droplet (no HA) | Low | Heroku fallback documented, acceptable for MVP |
+
+### Action Items
+
+**Should-Fix:**
+1. Add local development setup script
+2. Document API versioning strategy
+3. Final review of `docs/ui-architecture.md` for alignment with this document
+
+### AI Implementation Readiness
+
+**Rating: EXCELLENT** ✅
+
+- Pattern consistency: High (Layered backend, Riverpod frontend)
+- Clarity: High (Explicit examples, code snippets)
+- File organization: Clear (Source tree documented)
+
+### Checklist Completed
+
+- **Date:** 2026-02-10
+- **Reviewed by:** Winston (Architect)
+- **Approval:** Architecture approved for development with noted action items
+
+---
+
+## Next Steps
+
+### Immediate Actions
+
+1. **Review Frontend Architecture:** The detailed Frontend Architecture Document exists at `docs/ui-architecture.md` - review for final alignment
+2. **Story Creation:** Begin creating user stories from PRD epics
+3. **Infrastructure Setup:** Initialize Terraform for DigitalOcean resources
+
+### Related Documents
+
+| Document | Location | Purpose |
+|----------|----------|---------|
+| **Frontend Architecture** | `docs/ui-architecture.md` | Detailed Flutter/Riverpod implementation guide |
+| **UI/UX Specification** | `docs/front-end-spec.md` | Screens, flows, visual design specs |
+| **PRD** | `docs/prd/` | Product requirements and epics |

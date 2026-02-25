@@ -1,0 +1,756 @@
+# Quran Database Setup Guide
+
+**Project:** Lawh
+**Version:** 1.0
+**Last Updated:** 2026-02-03
+
+---
+
+## Overview
+
+This guide walks you through setting up the Quran text database for the Lawh mobile app. The database contains all 6,236 verses from 114 surahs in SQLite format for fast, offline verse lookup.
+
+**Time Required:** 20-30 minutes
+**Database Size:** ~5MB
+**Format:** SQLite 3
+
+---
+
+## Prerequisites
+
+- Python 3.8+ installed
+- pip (Python package manager)
+- Internet connection (for downloading Quran data)
+- Flutter project initialized
+
+---
+
+## Step 1: Choose Quran Text Source
+
+We recommend **Tanzil.net** for its accuracy, permissive license, and wide adoption.
+
+### Option A: Tanzil.net (Recommended)
+
+```bash
+# Download Quran text in XML format
+curl -o quran-simple.xml http://tanzil.net/trans/?transID=en.sahih&type=xml
+
+# Or download multiple translations
+curl -o quran-uthmani.txt http://tanzil.net/download/quran-uthmani.txt
+```
+
+### Option B: Quran.com API (Recommended - Always Up-to-Date)
+
+Uses the official Quran.com API to fetch the latest verified text.
+
+```bash
+# Will be downloaded by the Python script below
+```
+
+### Option C: Pre-Built Database
+
+```bash
+# Use community-maintained database
+git clone https://github.com/spa5k/quran-db.git
+cp quran-db/quran.db assets/data/quran.db
+```
+
+**⚠️ Important:** Verify licensing terms for commercial use regardless of source.
+
+---
+
+## Step 2: Database Schema Design
+
+### Tables
+
+**1. verses** - All 6,236 Quranic verses
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER PRIMARY KEY | Auto-increment ID |
+| surah_number | INTEGER | Surah number (1-114) |
+| ayah_number | INTEGER | Verse number within surah |
+| text_arabic | TEXT | Full Arabic text with Tajweed diacritics |
+| text_simple | TEXT | Simplified Arabic (no diacritics) for fuzzy matching |
+| juz_number | INTEGER | Juz/Para number (1-30) |
+| page_number | INTEGER | Mushaf page number (optional) |
+
+**2. surahs** - Metadata for all 114 surahs
+
+| Column | Type | Description |
+|--------|------|-------------|
+| surah_number | INTEGER PRIMARY KEY | Surah number (1-114) |
+| name_arabic | TEXT | Arabic name (e.g., الفاتحة) |
+| name_english | TEXT | English name (e.g., Al-Fatihah) |
+| name_transliteration | TEXT | Transliteration (e.g., Al-Faatiha) |
+| revelation_place | TEXT | Meccan or Medinan |
+| ayah_count | INTEGER | Number of verses in surah |
+
+### Indexes
+
+```sql
+CREATE INDEX idx_verses_surah ON verses(surah_number);
+CREATE INDEX idx_verses_surah_ayah ON verses(surah_number, ayah_number);
+CREATE INDEX idx_verses_text_simple ON verses(text_simple);
+```
+
+**Rationale:**
+- Fast lookup by surah/ayah reference
+- Efficient text search for fuzzy matching
+- Total database size: ~5MB (manageable for mobile)
+
+---
+
+## Step 3: Generate Database with Python Script
+
+### Install Dependencies
+
+```bash
+pip install requests sqlite3
+```
+
+### Create Generation Script
+
+Create file: `scripts/generate_quran_db.py`
+
+```python
+#!/usr/bin/env python3
+"""
+Quran Database Generator
+Downloads Quran text from Quran.com API and creates SQLite database.
+"""
+
+import sqlite3
+import requests
+import sys
+from pathlib import Path
+
+# Surah metadata (all 114 surahs)
+SURAH_METADATA = [
+    (1, 'الفاتحة', 'Al-Fatihah', 'Al-Faatiha', 'Meccan', 7),
+    (2, 'البقرة', 'Al-Baqarah', 'Al-Baqara', 'Medinan', 286),
+    (3, 'آل عمران', 'Ali \'Imran', 'Aal-i-Imraan', 'Medinan', 200),
+    (4, 'النساء', 'An-Nisa', 'An-Nisaa', 'Medinan', 176),
+    (5, 'المائدة', 'Al-Ma\'idah', 'Al-Maaida', 'Medinan', 120),
+    (6, 'الأنعام', 'Al-An\'am', 'Al-Anaam', 'Meccan', 165),
+    (7, 'الأعراف', 'Al-A\'raf', 'Al-Araaf', 'Meccan', 206),
+    (8, 'الأنفال', 'Al-Anfal', 'Al-Anfaal', 'Medinan', 75),
+    (9, 'التوبة', 'At-Tawbah', 'At-Tawba', 'Medinan', 129),
+    (10, 'يونس', 'Yunus', 'Yunus', 'Meccan', 109),
+    (11, 'هود', 'Hud', 'Hud', 'Meccan', 123),
+    (12, 'يوسف', 'Yusuf', 'Yusuf', 'Meccan', 111),
+    (13, 'الرعد', 'Ar-Ra\'d', 'Ar-Rad', 'Medinan', 43),
+    (14, 'ابراهيم', 'Ibrahim', 'Ibrahim', 'Meccan', 52),
+    (15, 'الحجر', 'Al-Hijr', 'Al-Hijr', 'Meccan', 99),
+    (16, 'النحل', 'An-Nahl', 'An-Nahl', 'Meccan', 128),
+    (17, 'الإسراء', 'Al-Isra', 'Al-Israa', 'Meccan', 111),
+    (18, 'الكهف', 'Al-Kahf', 'Al-Kahf', 'Meccan', 110),
+    (19, 'مريم', 'Maryam', 'Maryam', 'Meccan', 98),
+    (20, 'طه', 'Taha', 'Taa-Haa', 'Meccan', 135),
+    (21, 'الأنبياء', 'Al-Anbya', 'Al-Anbiyaa', 'Meccan', 112),
+    (22, 'الحج', 'Al-Hajj', 'Al-Hajj', 'Medinan', 78),
+    (23, 'المؤمنون', 'Al-Mu\'minun', 'Al-Muminoon', 'Meccan', 118),
+    (24, 'النور', 'An-Nur', 'An-Noor', 'Medinan', 64),
+    (25, 'الفرقان', 'Al-Furqan', 'Al-Furqaan', 'Meccan', 77),
+    (26, 'الشعراء', 'Ash-Shu\'ara', 'Ash-Shuaraa', 'Meccan', 227),
+    (27, 'النمل', 'An-Naml', 'An-Naml', 'Meccan', 93),
+    (28, 'القصص', 'Al-Qasas', 'Al-Qasas', 'Meccan', 88),
+    (29, 'العنكبوت', 'Al-\'Ankabut', 'Al-Ankaboot', 'Meccan', 69),
+    (30, 'الروم', 'Ar-Rum', 'Ar-Room', 'Meccan', 60),
+    (31, 'لقمان', 'Luqman', 'Luqman', 'Meccan', 34),
+    (32, 'السجدة', 'As-Sajdah', 'As-Sajda', 'Meccan', 30),
+    (33, 'الأحزاب', 'Al-Ahzab', 'Al-Ahzaab', 'Medinan', 73),
+    (34, 'سبأ', 'Saba', 'Saba', 'Meccan', 54),
+    (35, 'فاطر', 'Fatir', 'Faatir', 'Meccan', 45),
+    (36, 'يس', 'Ya-Sin', 'Yaseen', 'Meccan', 83),
+    (37, 'الصافات', 'As-Saffat', 'As-Saaffaat', 'Meccan', 182),
+    (38, 'ص', 'Sad', 'Saad', 'Meccan', 88),
+    (39, 'الزمر', 'Az-Zumar', 'Az-Zumar', 'Meccan', 75),
+    (40, 'غافر', 'Ghafir', 'Ghafir', 'Meccan', 85),
+    (41, 'فصلت', 'Fussilat', 'Fussilat', 'Meccan', 54),
+    (42, 'الشورى', 'Ash-Shuraa', 'Ash-Shura', 'Meccan', 53),
+    (43, 'الزخرف', 'Az-Zukhruf', 'Az-Zukhruf', 'Meccan', 89),
+    (44, 'الدخان', 'Ad-Dukhan', 'Ad-Dukhaan', 'Meccan', 59),
+    (45, 'الجاثية', 'Al-Jathiyah', 'Al-Jaathiya', 'Meccan', 37),
+    (46, 'الأحقاف', 'Al-Ahqaf', 'Al-Ahqaf', 'Meccan', 35),
+    (47, 'محمد', 'Muhammad', 'Muhammad', 'Medinan', 38),
+    (48, 'الفتح', 'Al-Fath', 'Al-Fath', 'Medinan', 29),
+    (49, 'الحجرات', 'Al-Hujurat', 'Al-Hujuraat', 'Medinan', 18),
+    (50, 'ق', 'Qaf', 'Qaaf', 'Meccan', 45),
+    (51, 'الذاريات', 'Adh-Dhariyat', 'Adh-Dhaariyat', 'Meccan', 60),
+    (52, 'الطور', 'At-Tur', 'At-Tur', 'Meccan', 49),
+    (53, 'النجم', 'An-Najm', 'An-Najm', 'Meccan', 62),
+    (54, 'القمر', 'Al-Qamar', 'Al-Qamar', 'Meccan', 55),
+    (55, 'الرحمن', 'Ar-Rahman', 'Ar-Rahmaan', 'Medinan', 78),
+    (56, 'الواقعة', 'Al-Waqi\'ah', 'Al-Waaqi', 'Meccan', 96),
+    (57, 'الحديد', 'Al-Hadid', 'Al-Hadeed', 'Medinan', 29),
+    (58, 'المجادلة', 'Al-Mujadila', 'Al-Mujaadila', 'Medinan', 22),
+    (59, 'الحشر', 'Al-Hashr', 'Al-Hashr', 'Medinan', 24),
+    (60, 'الممتحنة', 'Al-Mumtahanah', 'Al-Mumtahana', 'Medinan', 13),
+    (61, 'الصف', 'As-Saf', 'As-Saff', 'Medinan', 14),
+    (62, 'الجمعة', 'Al-Jumu\'ah', 'Al-Jumua', 'Medinan', 11),
+    (63, 'المنافقون', 'Al-Munafiqun', 'Al-Munaafiqoon', 'Medinan', 11),
+    (64, 'التغابن', 'At-Taghabun', 'At-Taghaabun', 'Medinan', 18),
+    (65, 'الطلاق', 'At-Talaq', 'At-Talaaq', 'Medinan', 12),
+    (66, 'التحريم', 'At-Tahrim', 'At-Tahreem', 'Medinan', 12),
+    (67, 'الملك', 'Al-Mulk', 'Al-Mulk', 'Meccan', 30),
+    (68, 'القلم', 'Al-Qalam', 'Al-Qalam', 'Meccan', 52),
+    (69, 'الحاقة', 'Al-Haqqah', 'Al-Haaqqa', 'Meccan', 52),
+    (70, 'المعارج', 'Al-Ma\'arij', 'Al-Maarij', 'Meccan', 44),
+    (71, 'نوح', 'Nuh', 'Nooh', 'Meccan', 28),
+    (72, 'الجن', 'Al-Jinn', 'Al-Jinn', 'Meccan', 28),
+    (73, 'المزمل', 'Al-Muzzammil', 'Al-Muzzammil', 'Meccan', 20),
+    (74, 'المدثر', 'Al-Muddaththir', 'Al-Muddaththir', 'Meccan', 56),
+    (75, 'القيامة', 'Al-Qiyamah', 'Al-Qiyaama', 'Meccan', 40),
+    (76, 'الانسان', 'Al-Insan', 'Al-Insaan', 'Medinan', 31),
+    (77, 'المرسلات', 'Al-Mursalat', 'Al-Mursalaat', 'Meccan', 50),
+    (78, 'النبأ', 'An-Naba', 'An-Naba', 'Meccan', 40),
+    (79, 'النازعات', 'An-Nazi\'at', 'An-Naazi', 'Meccan', 46),
+    (80, 'عبس', '\'Abasa', 'Abasa', 'Meccan', 42),
+    (81, 'التكوير', 'At-Takwir', 'At-Takweer', 'Meccan', 29),
+    (82, 'الإنفطار', 'Al-Infitar', 'Al-Infitaar', 'Meccan', 19),
+    (83, 'المطففين', 'Al-Mutaffifin', 'Al-Mutaffifeen', 'Meccan', 36),
+    (84, 'الإنشقاق', 'Al-Inshiqaq', 'Al-Inshiqaaq', 'Meccan', 25),
+    (85, 'البروج', 'Al-Buruj', 'Al-Burooj', 'Meccan', 22),
+    (86, 'الطارق', 'At-Tariq', 'At-Taariq', 'Meccan', 17),
+    (87, 'الأعلى', 'Al-A\'la', 'Al-A', 'Meccan', 19),
+    (88, 'الغاشية', 'Al-Ghashiyah', 'Al-Ghaashiya', 'Meccan', 26),
+    (89, 'الفجر', 'Al-Fajr', 'Al-Fajr', 'Meccan', 30),
+    (90, 'البلد', 'Al-Balad', 'Al-Balad', 'Meccan', 20),
+    (91, 'الشمس', 'Ash-Shams', 'Ash-Shams', 'Meccan', 15),
+    (92, 'الليل', 'Al-Layl', 'Al-Lail', 'Meccan', 21),
+    (93, 'الضحى', 'Ad-Duhaa', 'Ad-Dhuhaa', 'Meccan', 11),
+    (94, 'الشرح', 'Ash-Sharh', 'Ash-Sharh', 'Meccan', 8),
+    (95, 'التين', 'At-Tin', 'At-Teen', 'Meccan', 8),
+    (96, 'العلق', 'Al-\'Alaq', 'Al-Alaq', 'Meccan', 19),
+    (97, 'القدر', 'Al-Qadr', 'Al-Qadr', 'Meccan', 5),
+    (98, 'البينة', 'Al-Bayyinah', 'Al-Bayyina', 'Medinan', 8),
+    (99, 'الزلزلة', 'Az-Zalzalah', 'Az-Zalzala', 'Medinan', 8),
+    (100, 'العاديات', 'Al-\'Adiyat', 'Al-Aadiyaat', 'Meccan', 11),
+    (101, 'القارعة', 'Al-Qari\'ah', 'Al-Qaari', 'Meccan', 11),
+    (102, 'التكاثر', 'At-Takathur', 'At-Takaathur', 'Meccan', 8),
+    (103, 'العصر', 'Al-\'Asr', 'Al-Asr', 'Meccan', 3),
+    (104, 'الهمزة', 'Al-Humazah', 'Al-Humaza', 'Meccan', 9),
+    (105, 'الفيل', 'Al-Fil', 'Al-Feel', 'Meccan', 5),
+    (106, 'قريش', 'Quraysh', 'Quraish', 'Meccan', 4),
+    (107, 'الماعون', 'Al-Ma\'un', 'Al-Maaoon', 'Meccan', 7),
+    (108, 'الكوثر', 'Al-Kawthar', 'Al-Kawthar', 'Meccan', 3),
+    (109, 'الكافرون', 'Al-Kafirun', 'Al-Kaafiroon', 'Meccan', 6),
+    (110, 'النصر', 'An-Nasr', 'An-Nasr', 'Medinan', 3),
+    (111, 'المسد', 'Al-Masad', 'Al-Masad', 'Meccan', 5),
+    (112, 'الإخلاص', 'Al-Ikhlas', 'Al-Ikhlaas', 'Meccan', 4),
+    (113, 'الفلق', 'Al-Falaq', 'Al-Falaq', 'Meccan', 5),
+    (114, 'الناس', 'An-Nas', 'An-Naas', 'Meccan', 6),
+]
+
+
+def download_quran_verses():
+    """Download all Quran verses from Quran.com API"""
+    print("📥 Downloading Quran verses from Quran.com API...")
+    verses = []
+
+    for surah in range(1, 115):
+        try:
+            url = f"https://api.quran.com/api/v4/quran/verses/uthmani?chapter_number={surah}"
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+
+            for verse in data['verses']:
+                # Extract verse data
+                text_arabic = verse.get('text_uthmani', '')
+                text_simple = verse.get('text_imlaei_simple', text_arabic)
+
+                # Remove diacritics from simple text for fuzzy matching
+                text_simple = remove_diacritics(text_simple)
+
+                verses.append({
+                    'surah_number': surah,
+                    'ayah_number': verse['verse_number'],
+                    'text_arabic': text_arabic,
+                    'text_simple': text_simple,
+                })
+
+            print(f"  ✓ Downloaded Surah {surah}/114 ({len(data['verses'])} verses)")
+
+        except Exception as e:
+            print(f"  ✗ Error downloading Surah {surah}: {e}")
+            sys.exit(1)
+
+    print(f"✅ Downloaded {len(verses)} verses successfully\n")
+    return verses
+
+
+def remove_diacritics(text):
+    """Remove Arabic diacritics for simplified text matching"""
+    import re
+    # Arabic diacritical marks (Unicode range)
+    diacritics_pattern = re.compile(r'[\u064B-\u065F\u0670]')
+    return diacritics_pattern.sub('', text)
+
+
+def create_database(verses, output_path='assets/data/quran.db'):
+    """Create SQLite database with verses and surahs"""
+    print(f"🗄️  Creating database at {output_path}...")
+
+    # Ensure directory exists
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+
+    # Create database
+    conn = sqlite3.connect(output_path)
+    cursor = conn.cursor()
+
+    # Create verses table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS verses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            surah_number INTEGER NOT NULL,
+            ayah_number INTEGER NOT NULL,
+            text_arabic TEXT NOT NULL,
+            text_simple TEXT NOT NULL,
+            UNIQUE(surah_number, ayah_number)
+        )
+    ''')
+
+    # Create surahs table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS surahs (
+            surah_number INTEGER PRIMARY KEY,
+            name_arabic TEXT NOT NULL,
+            name_english TEXT NOT NULL,
+            name_transliteration TEXT NOT NULL,
+            revelation_place TEXT,
+            ayah_count INTEGER NOT NULL
+        )
+    ''')
+
+    # Insert verses
+    print("  📝 Inserting verses...")
+    for verse in verses:
+        cursor.execute('''
+            INSERT OR IGNORE INTO verses
+            (surah_number, ayah_number, text_arabic, text_simple)
+            VALUES (?, ?, ?, ?)
+        ''', (
+            verse['surah_number'],
+            verse['ayah_number'],
+            verse['text_arabic'],
+            verse['text_simple']
+        ))
+
+    # Insert surah metadata
+    print("  📝 Inserting surah metadata...")
+    cursor.executemany('''
+        INSERT OR IGNORE INTO surahs
+        (surah_number, name_arabic, name_english, name_transliteration,
+         revelation_place, ayah_count)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', SURAH_METADATA)
+
+    # Create indexes
+    print("  🔍 Creating indexes...")
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_verses_surah ON verses(surah_number)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_verses_surah_ayah ON verses(surah_number, ayah_number)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_verses_text_simple ON verses(text_simple)')
+
+    conn.commit()
+
+    # Get statistics
+    verse_count = cursor.execute('SELECT COUNT(*) FROM verses').fetchone()[0]
+    surah_count = cursor.execute('SELECT COUNT(*) FROM surahs').fetchone()[0]
+    db_size = Path(output_path).stat().st_size / (1024 * 1024)  # MB
+
+    conn.close()
+
+    print(f"✅ Database created successfully!")
+    print(f"  • Verses: {verse_count}")
+    print(f"  • Surahs: {surah_count}")
+    print(f"  • Size: {db_size:.2f} MB")
+    print(f"  • Location: {output_path}")
+
+
+def main():
+    """Main execution"""
+    print("=" * 60)
+    print("Quran Database Generator for Lawh")
+    print("=" * 60)
+    print()
+
+    # Download verses
+    verses = download_quran_verses()
+
+    # Create database
+    create_database(verses)
+
+    print()
+    print("=" * 60)
+    print("✅ Database generation complete!")
+    print("=" * 60)
+    print()
+    print("Next steps:")
+    print("1. Add to pubspec.yaml: flutter/assets: - assets/data/quran.db")
+    print("2. Test with: flutter test test/unit/quran_datasource_test.dart")
+    print()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### Run the Script
+
+```bash
+# Install dependencies
+pip install requests
+
+# Run script
+python scripts/generate_quran_db.py
+```
+
+**Expected Output:**
+
+```
+============================================================
+Quran Database Generator for Lawh
+============================================================
+
+📥 Downloading Quran verses from Quran.com API...
+  ✓ Downloaded Surah 1/114 (7 verses)
+  ✓ Downloaded Surah 2/114 (286 verses)
+  ...
+  ✓ Downloaded Surah 114/114 (6 verses)
+✅ Downloaded 6236 verses successfully
+
+🗄️  Creating database at assets/data/quran.db...
+  📝 Inserting verses...
+  📝 Inserting surah metadata...
+  🔍 Creating indexes...
+✅ Database created successfully!
+  • Verses: 6236
+  • Surahs: 114
+  • Size: 4.87 MB
+  • Location: assets/data/quran.db
+
+============================================================
+✅ Database generation complete!
+============================================================
+```
+
+---
+
+## Step 4: Configure Flutter Project
+
+### Update pubspec.yaml
+
+```yaml
+flutter:
+  assets:
+    - assets/data/quran.db
+    - assets/fonts/
+```
+
+### Verify Asset Inclusion
+
+```bash
+# Clean build
+flutter clean
+
+# Get dependencies
+flutter pub get
+
+# Verify asset is included
+flutter analyze
+```
+
+---
+
+## Step 5: Implement Quran Data Layer
+
+### Create Datasource
+
+Create file: `lib/features/quran_reader/data/datasources/quran_local_datasource.dart`
+
+```dart
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
+class QuranLocalDatasource {
+  static Database? _database;
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDatabase();
+    return _database!;
+  }
+
+  Future<Database> _initDatabase() async {
+    final databasesPath = await getDatabasesPath();
+    final path = join(databasesPath, 'quran.db');
+
+    // Check if database exists
+    final exists = await databaseExists(path);
+
+    if (!exists) {
+      // Copy from assets to device storage
+      try {
+        await Directory(dirname(path)).create(recursive: true);
+      } catch (_) {}
+
+      // Load database from assets
+      ByteData data = await rootBundle.load('assets/data/quran.db');
+      List<int> bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+
+      // Write to device storage
+      await File(path).writeAsBytes(bytes, flush: true);
+    }
+
+    // Open database in read-only mode
+    return await openDatabase(path, readOnly: true);
+  }
+
+  /// Get single verse by surah and ayah number
+  Future<Map<String, dynamic>?> getVerse(int surah, int ayah) async {
+    final db = await database;
+    final result = await db.query(
+      'verses',
+      where: 'surah_number = ? AND ayah_number = ?',
+      whereArgs: [surah, ayah],
+    );
+
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  /// Get all verses from a surah
+  Future<List<Map<String, dynamic>>> getSurahVerses(int surah) async {
+    final db = await database;
+    return await db.query(
+      'verses',
+      where: 'surah_number = ?',
+      whereArgs: [surah],
+      orderBy: 'ayah_number ASC',
+    );
+  }
+
+  /// Get surah metadata
+  Future<Map<String, dynamic>?> getSurahMetadata(int surah) async {
+    final db = await database;
+    final result = await db.query(
+      'surahs',
+      where: 'surah_number = ?',
+      whereArgs: [surah],
+    );
+
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  /// Search verses by text (for fuzzy matching)
+  Future<List<Map<String, dynamic>>> searchVerses(
+    String query, {
+    int limit = 50,
+  }) async {
+    final db = await database;
+
+    // Search in simplified text (no diacritics)
+    return await db.query(
+      'verses',
+      where: 'text_simple LIKE ?',
+      whereArgs: ['%$query%'],
+      limit: limit,
+    );
+  }
+
+  /// Get all surahs metadata
+  Future<List<Map<String, dynamic>>> getAllSurahs() async {
+    final db = await database;
+    return await db.query('surahs', orderBy: 'surah_number ASC');
+  }
+}
+```
+
+### Create Domain Models
+
+Create file: `lib/features/quran_reader/domain/models/verse.dart`
+
+```dart
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'verse.freezed.dart';
+part 'verse.g.dart';
+
+@freezed
+class Verse with _$Verse {
+  const factory Verse({
+    required int surahNumber,
+    required int ayahNumber,
+    required String textArabic,
+    required String textSimple,
+    required String surahName,
+    required String surahNameArabic,
+  }) = _Verse;
+
+  factory Verse.fromJson(Map<String, dynamic> json) => _$VerseFromJson(json);
+}
+```
+
+---
+
+## Step 6: Test Database
+
+### Create Unit Test
+
+Create file: `test/unit/quran_datasource_test.dart`
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lawh/features/quran_reader/data/datasources/quran_local_datasource.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late QuranLocalDatasource datasource;
+
+  setUp(() {
+    datasource = QuranLocalDatasource();
+  });
+
+  group('QuranLocalDatasource', () {
+    test('loads database successfully', () async {
+      final db = await datasource.database;
+      expect(db, isNotNull);
+      expect(db.isOpen, isTrue);
+    });
+
+    test('retrieves Al-Fatihah verse 1 (Bismillah)', () async {
+      final verse = await datasource.getVerse(1, 1);
+
+      expect(verse, isNotNull);
+      expect(verse!['surah_number'], 1);
+      expect(verse['ayah_number'], 1);
+      expect(verse['text_arabic'], contains('بِسْمِ اللَّهِ'));
+      expect(verse['text_arabic'], contains('الرَّحْمَٰنِ'));
+      expect(verse['text_arabic'], contains('الرَّحِيمِ'));
+    });
+
+    test('retrieves all 7 verses from Al-Fatihah', () async {
+      final verses = await datasource.getSurahVerses(1);
+
+      expect(verses.length, 7);
+      expect(verses.first['ayah_number'], 1);
+      expect(verses.last['ayah_number'], 7);
+    });
+
+    test('retrieves Ayat al-Kursi (2:255)', () async {
+      final verse = await datasource.getVerse(2, 255);
+
+      expect(verse, isNotNull);
+      expect(verse!['text_arabic'], contains('اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ'));
+    });
+
+    test('retrieves surah metadata for Al-Baqarah', () async {
+      final surah = await datasource.getSurahMetadata(2);
+
+      expect(surah, isNotNull);
+      expect(surah!['name_english'], 'Al-Baqarah');
+      expect(surah['name_arabic'], 'البقرة');
+      expect(surah['ayah_count'], 286);
+      expect(surah['revelation_place'], 'Medinan');
+    });
+
+    test('searches for verses containing "الرحمن"', () async {
+      final results = await datasource.searchVerses('الرحمن');
+
+      expect(results, isNotEmpty);
+      expect(results.length, greaterThan(50));
+    });
+
+    test('returns empty for non-existent verse', () async {
+      final verse = await datasource.getVerse(999, 999);
+
+      expect(verse, isNull);
+    });
+
+    test('retrieves all 114 surahs', () async {
+      final surahs = await datasource.getAllSurahs();
+
+      expect(surahs.length, 114);
+      expect(surahs.first['surah_number'], 1);
+      expect(surahs.last['surah_number'], 114);
+    });
+  });
+}
+```
+
+### Run Tests
+
+```bash
+# Run tests
+flutter test test/unit/quran_datasource_test.dart
+
+# Expected: All tests pass ✅
+```
+
+---
+
+## Verification Checklist
+
+After setup, verify the following:
+
+- [ ] Database file exists at `assets/data/quran.db`
+- [ ] Database size is ~5MB
+- [ ] Contains 6,236 verses
+- [ ] Contains 114 surahs
+- [ ] All unit tests pass
+- [ ] Can query verse by surah/ayah
+- [ ] Can search verses by text
+- [ ] Indexes are created for fast lookup
+
+---
+
+## Troubleshooting
+
+### Issue: "Asset not found"
+
+**Solution:**
+```bash
+flutter clean
+flutter pub get
+flutter run
+```
+
+### Issue: "Database is locked"
+
+**Solution:**
+- Ensure database is opened in `readOnly: true` mode
+- Only one database instance should exist (use singleton pattern)
+
+### Issue: "Incorrect Arabic text rendering"
+
+**Solution:**
+- Verify UTF-8 encoding in database
+- Ensure Uthmanic font is configured in pubspec.yaml
+- Test with `textDirection: TextDirection.rtl`
+
+### Issue: "Database too large (>10MB)"
+
+**Solution:**
+- Remove unused columns (juz_number, page_number)
+- Consider splitting into multiple databases by surah range
+
+---
+
+## Next Steps
+
+1. **Implement Fuzzy Matching**: Use `text_simple` column for matching Azure STT output
+2. **Add Caching**: Implement repository layer with in-memory caching
+3. **Test Performance**: Profile database queries on low-end devices
+4. **Add Translations**: Extend schema to support multi-language translations (Phase 2)
+
+---
+
+**Document Status:** ✅ Complete
+**Last Updated:** 2026-02-03

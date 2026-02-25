@@ -1,0 +1,1208 @@
+# Lawh UI/UX Specification
+
+**Version:** 1.0
+**Date:** 2026-02-03
+**Author:** Sally (UX Expert)
+**Status:** Complete - Ready for Implementation
+
+---
+
+## Introduction
+
+This document defines the user experience goals, information architecture, user flows, and visual design specifications for Lawh's user interface. It serves as the foundation for visual design and frontend development, ensuring a cohesive and user-centered experience.
+
+### Overall UX Goals & Principles
+
+#### Target User Personas
+
+- **Active Mosque Attendee:** Muslims aged 14-60 who regularly hear Quranic recitations at mosques, lectures, and prayers. They need immediate verse identification without Arabic typing skills.
+- **Hajj/Umrah Pilgrim:** Pilgrims experiencing once-in-a-lifetime spiritual moments at holy sites who want to preserve and share meaningful verses they hear during their journey.
+- **Islamic Content Consumer:** Users who listen to Quran recitations via YouTube, apps, or live streams and want to identify specific verses for deeper study and memorization.
+
+#### Usability Goals
+
+- **Speed:** 90% of searches return results within 5 seconds, maintaining spiritual flow
+- **Clarity:** Users understand confidence levels and result quality immediately without explanation
+- **Minimal Friction:** New users can complete their first verse identification within 1 minute of opening the app
+- **Trust:** Transparent feedback mechanisms and privacy controls build confidence in results
+
+#### Design Principles
+
+1. **Spiritual Minimalism** - Clean, uncluttered interfaces that honor the sacred content
+2. **Instant Clarity** - Every action has one clear outcome with no hidden complexity
+3. **Trust Through Transparency** - Confidence indicators and clear feedback eliminate uncertainty
+4. **Respectful Interaction** - No gamification, manipulative patterns, or intrusive elements
+5. **Accessible by Default** - Design for diverse users from the start with platform standards
+
+#### Change Log
+
+| Date       | Version | Description                           | Author |
+|------------|---------|---------------------------------------|--------|
+| 2026-02-03 | 1.0     | Initial UI/UX Specification created   | Sally  |
+
+---
+
+## Information Architecture (IA)
+
+### Site Map / Screen Inventory
+
+```mermaid
+graph TD
+    A[Main Screen / Listen] --> B[Recording in Progress]
+    B --> C[Results Screen]
+    C --> D[Quran Reader]
+    C --> E[Try Again / Return to Main]
+    A --> F[Settings]
+    F --> G[Privacy Policy]
+    F --> H[Data Deletion Request]
+    F --> I[About Lawh]
+    F --> J[Support/Feedback]
+    A --> K[Sadaqah/Donation]
+    C --> K
+    F --> K
+    A --> L[First Launch Onboarding - Optional]
+    L --> A
+    C --> M[Error/Retry Screen]
+    M --> A
+```
+
+### Navigation Structure
+
+**Primary Navigation:** Tab-free single-screen app with modal overlays. Main Screen (Listen) serves as the persistent home base. All user journeys begin and return to this screen.
+
+**Secondary Navigation:**
+- Settings accessible via icon in top-right corner of Main Screen
+- Back navigation from Results → Main Screen, Quran Reader → Results Screen
+- Modal sheets for Donation and Onboarding flows
+
+**Breadcrumb Strategy:** No breadcrumbs needed—maximum navigation depth is 2 levels (Main → Results → Quran Reader OR Main → Settings → Sub-setting). Clear "Back" affordances and modal dismissal patterns provide sufficient wayfinding.
+
+---
+
+## User Flows
+
+### Flow 1: Core Verse Identification Flow
+
+**User Goal:** Identify a Quranic verse from a live recitation they're hearing
+
+**Entry Points:** Main Screen "Listen" button (primary), App icon tap (if returning user)
+
+**Success Criteria:** User receives verse identification and can read the full verse in context
+
+**Flow Diagram:**
+
+```mermaid
+graph TD
+    A[Main Screen] --> B{Tap Listen Button}
+    B --> C[Recording Screen - 0-10 sec]
+    C --> D{Recording Duration?}
+    D -->|< 10 seconds| E[Tap again disabled / wait]
+    D -->|≥ 10 seconds| F{User Action?}
+    E --> F
+    F -->|Auto-stop at 15 sec| G[Processing / API Call]
+    F -->|Tap to stop early| G
+    G --> H{STT Success?}
+    H -->|No - Network Error| I[Error Screen: Check Connection]
+    H -->|No - API Error| I
+    H -->|Yes| J{Fuzzy Match Confidence?}
+    J -->|High ≥90%| K[Results: 1 Verse Shown]
+    J -->|Medium 65-89%| L[Results: 2-3 Options Shown]
+    J -->|Low <65%| M[Retry Screen: Try Quieter Space]
+    K --> N{User Taps Result}
+    L --> N
+    N --> O[Quran Reader Opens at Verse]
+    O --> P{User Action?}
+    P -->|Back Button| Q[Return to Results]
+    P -->|Read More| O
+    Q --> R[Back to Main Screen]
+    I --> S{Tap Try Again}
+    M --> S
+    S --> B
+```
+
+**Edge Cases & Error Handling:**
+
+- **Insufficient recording length (<10 sec):** Disable early stop; show countdown "Record at least 10 seconds"
+- **Network timeout during STT call:** Show friendly error "Check your internet connection" with retry button
+- **Azure STT service down:** Fallback error message "Service temporarily unavailable, please try again"
+- **No Quran text in recording:** Low confidence triggers retry screen with guidance
+- **Ambiguous recitation (multiple possible matches):** Medium confidence shows 2-3 options with preview text
+- **User background sounds:** Azure's built-in noise suppression handles; if confidence still low, retry prompt appears
+
+**Notes:** This is the primary user journey—all other flows are secondary or supporting. 90% of app usage should follow this exact path.
+
+---
+
+### Flow 2: Feedback Collection Flow
+
+**User Goal:** Provide feedback on verse identification accuracy
+
+**Entry Points:** Results Screen after verse identification
+
+**Success Criteria:** Feedback successfully submitted (implicit or explicit) to improve future accuracy
+
+**Flow Diagram:**
+
+```mermaid
+graph TD
+    A[Results Screen Displayed] --> B{Implicit Feedback}
+    B -->|User taps verse| C[Click tracked - Positive signal]
+    B -->|User taps 'None of these'| D[Explicit negative feedback]
+    B -->|User scrolls/waits| E[Time on screen tracked]
+    A --> F{Explicit Feedback?}
+    F -->|Thumbs Up| G[Positive feedback saved]
+    F -->|Thumbs Down| H[Negative feedback saved]
+    F -->|No action| I[No explicit feedback recorded]
+    C --> J[Feedback sent to backend]
+    D --> J
+    G --> J
+    H --> J
+    J --> K[Anonymous UUID + Search ID linked]
+    K --> L[Training data collected]
+    D --> M[Show 'Try Again' prompt]
+```
+
+**Edge Cases & Error Handling:**
+
+- **User gives thumbs up but clicks 'None of these':** Prioritize explicit negative action over implicit positive
+- **Network failure during feedback submission:** Queue feedback locally, retry on next app open
+- **User rapidly taps multiple feedback buttons:** Debounce to prevent duplicate submissions; only accept first action
+
+**Notes:** Feedback is critical for improving algorithm accuracy over time. Design must make feedback feel natural, not burdensome.
+
+---
+
+### Flow 3: Sadaqah Donation Flow
+
+**User Goal:** Support Lawh through voluntary donation
+
+**Entry Points:** "Support Lawh" button on Main Screen, Results Screen, or Settings
+
+**Success Criteria:** User completes donation via Stripe payment gateway
+
+**Flow Diagram:**
+
+```mermaid
+graph TD
+    A[User taps 'Support Lawh'] --> B[Donation Modal Opens]
+    B --> C[Preset amounts shown: $5, $10, $25, Custom]
+    C --> D{User selects amount}
+    D --> E[Stripe payment sheet opens]
+    E --> F{Payment attempt?}
+    F -->|Successful| G[Thank you message displayed]
+    F -->|Failed| H[Error: Payment failed, try again]
+    F -->|Cancelled| I[Return to previous screen]
+    G --> J[Modal closes after 2 seconds]
+    J --> K[Return to previous screen]
+    H --> L{Retry?}
+    L -->|Yes| E
+    L -->|No| I
+```
+
+**Edge Cases & Error Handling:**
+
+- **Payment gateway down:** Show apologetic error "Our payment system is temporarily unavailable"
+- **User closes modal mid-payment:** No charge processed; return to previous screen gracefully
+- **International payment methods:** Stripe handles currency conversion automatically
+- **Islamic payment preference:** Ensure Stripe supports Zakat-friendly processors (research needed)
+
+**Notes:** Donation flow must feel respectful and pressure-free. Never block features or show guilt-inducing messaging.
+
+---
+
+### Flow 4: Location Data Collection Flow
+
+**User Goal:** Understand and control location data sharing
+
+**Entry Points:** First search attempt (triggers OS permission), Settings toggle
+
+**Success Criteria:** User makes informed choice about location sharing; preference is respected
+
+**Flow Diagram:**
+
+```mermaid
+graph TD
+    A[First Search Initiated] --> B{Location Permission?}
+    B -->|Not yet asked| C[OS Permission Dialog: Allow Once/While Using/Don't Allow]
+    B -->|Previously granted| D[Collect city/region with search]
+    B -->|Previously denied| E[Skip location collection]
+    C --> F{User choice?}
+    F -->|Allow| D
+    F -->|Deny| E
+    D --> G[City/region sent with search metadata]
+    E --> H[Search proceeds without location]
+    G --> I[Search completes normally]
+    H --> I
+    I --> J[User visits Settings later]
+    J --> K{Toggle location sharing?}
+    K -->|Turn off| L[Future searches skip location]
+    K -->|Turn on| M[Future searches include location]
+```
+
+**Edge Cases & Error Handling:**
+
+- **Location services disabled at OS level:** Show helpful message "Enable location in device settings to share city/region"
+- **Location unavailable (airplane mode, GPS failure):** Proceed with search without location data
+- **User changes permission mid-session:** App respects new permission state immediately
+
+**Notes:** Transparency is critical for trust. Make it clear location is optional and explain why it's collected (understanding regional recitation preferences).
+
+---
+
+## Wireframes & Mockups
+
+**Primary Design Files:** Direct implementation in Flutter with iterative design refinement. Visual design decisions will be made during development with stakeholder review at key milestones. Screenshots and recordings of implemented screens will serve as design documentation.
+
+### Key Screen Layouts
+
+#### Screen 1: Main Screen (Listen/Home)
+
+**Purpose:** Primary entry point for verse identification; always accessible as home base
+
+**Key Elements:**
+- Large, centered "Listen" button (primary CTA, ~120pt diameter on mobile)
+- App branding/logo at top center
+- "Support Lawh (Sadaqah)" button positioned prominently but not blocking primary action (bottom third of screen)
+- Settings icon (gear/cog) in top-right corner
+- Clean background (solid color or subtle Islamic geometric pattern)
+
+**Interaction Notes:**
+- "Listen" button has three states: Default (ready), Active (recording with waveform animation), Processing (spinner/loading)
+- Sadaqah button should feel inviting, not guilt-inducing—use positive copy like "Support This Work" rather than "Donate Now"
+- First-time users see this screen immediately (no forced onboarding unless time permits)
+
+**Design File Reference:** TBD (Flutter implementation screenshot)
+
+---
+
+#### Screen 2: Recording in Progress
+
+**Purpose:** Provide visual feedback during 10-15 second audio capture
+
+**Key Elements:**
+- Animated waveform or audio visualization showing live input
+- Countdown timer showing seconds remaining (10...15)
+- "Recording..." label
+- "Stop" button (only enabled after 10 seconds minimum)
+- Cancel/dismiss option (X in top-left corner)
+
+**Interaction Notes:**
+- Waveform animation reassures user the mic is capturing audio
+- Timer prevents premature stopping (<10 sec) while allowing early stop after minimum threshold
+- Auto-stops at 15 seconds with smooth transition to Processing state
+
+**Design File Reference:** TBD
+
+---
+
+#### Screen 3: Results Screen (High Confidence)
+
+**Purpose:** Display identified verse when system is highly confident (≥90%)
+
+**Key Elements:**
+- Single verse result card with:
+  - Surah name in English + Arabic (e.g., "Al-Baqarah • البقرة")
+  - Verse number prominently displayed (e.g., "Verse 255")
+  - First 2-3 words of verse in Arabic as preview
+  - High confidence indicator (subtle visual: checkmark icon, green accent)
+- Thumbs up/down feedback buttons at bottom of card
+- "Try Again" button below feedback (secondary action)
+- "Read Full Verse" CTA (or tap anywhere on card to open Quran Reader)
+
+**Interaction Notes:**
+- Entire card is tappable to open Quran Reader at that verse
+- Confidence indicator should be reassuring but not prominent—user shouldn't need to think about it
+- Feedback buttons are always visible but never intrusive (small, bottom-aligned)
+
+**Design File Reference:** TBD
+
+---
+
+#### Screen 4: Results Screen (Medium Confidence)
+
+**Purpose:** Display 2-3 verse options when system is moderately confident (65-89%)
+
+**Key Elements:**
+- 2-3 verse result cards stacked vertically, each showing:
+  - Surah name + verse number
+  - Arabic preview text (first few words)
+  - Medium confidence indicator (less prominent than high confidence)
+- "None of these" button at bottom
+- "Try Again" button below "None of these"
+- Thumbs up/down feedback buttons on each card
+
+**Interaction Notes:**
+- Cards are selectable—tapping opens that verse in Quran Reader
+- Visual hierarchy: first result slightly larger/more prominent (highest confidence of the group)
+- "None of these" triggers retry flow with encouragement to record in quieter space
+
+**Design File Reference:** TBD
+
+---
+
+#### Screen 5: Quran Reader Screen
+
+**Purpose:** Display full Quranic text at identified verse for reading in context
+
+**Key Elements:**
+- Full-page Arabic text display using Uthmani script
+- Identified verse highlighted with subtle visual indicator (background tint or side border, not disruptive)
+- Surah name and page number in header
+- Back button (top-left) to return to Results Screen
+- Minimal chrome—focus entirely on text
+- Scrollable to read surrounding verses before/after
+
+**Interaction Notes:**
+- Text sizing respects platform accessibility settings (Dynamic Type on iOS, font scaling on Android)
+- Highlighting should be obvious but respectful (avoid bright colors that distract from sacred text)
+- Smooth scrolling with verse boundaries visible
+
+**Design File Reference:** TBD
+
+---
+
+#### Screen 6: Settings Screen
+
+**Purpose:** Manage privacy preferences, access support, and review app information
+
+**Key Elements:**
+- Location sharing toggle with explanation text ("Help us understand regional recitation preferences")
+- Privacy Policy link
+- Data Deletion Request button
+- About Lawh section (app version, purpose statement)
+- Support/Feedback contact link
+- "Support Lawh (Sadaqah)" button (repeated from Main Screen)
+
+**Interaction Notes:**
+- Toggle changes take effect immediately (no "Save" button needed)
+- Data Deletion Request shows confirmation dialog before proceeding
+- Settings should feel lightweight—not a dumping ground for features
+
+**Design File Reference:** TBD
+
+---
+
+#### Screen 7: Error/Retry Screen
+
+**Purpose:** Guide users when verse identification fails or confidence is too low (<65%)
+
+**Key Elements:**
+- Friendly error icon (not harsh "X" or warning symbol)
+- Contextual error message:
+  - Low confidence: "Couldn't identify the verse. Try recording in a quieter space."
+  - Network error: "Check your internet connection and try again."
+  - API error: "Something went wrong. Please try again in a moment."
+- Large "Try Again" button (primary CTA)
+- "Back to Home" option (secondary, text link)
+
+**Interaction Notes:**
+- Tone should be encouraging, not blaming ("Try again" not "You failed")
+- Error messages guide next action rather than just stating problem
+- No technical jargon (avoid "API timeout" or "STT failure")
+
+**Design File Reference:** TBD
+
+---
+
+## Component Library / Design System
+
+**Design System Approach:** Hybrid approach using platform-native design systems (Material Design 3 for Android, Cupertino for iOS) as the foundation, with custom-styled components for brand-specific elements. This leverages Flutter's excellent platform adaptation while maintaining Lawh's unique visual identity.
+
+**Rationale:** Building a custom design system from scratch would consume 1-2 weeks of your 4-week timeline. Using Material/Cupertino provides proven accessibility patterns, platform-familiar interactions, pre-built animations, and faster development velocity. Custom styling applied to: branding colors, typography for Arabic text, primary CTA button, and result cards to establish unique identity.
+
+### Core Components
+
+#### Component 1: Primary Action Button
+
+**Purpose:** Main "Listen" button for initiating verse identification
+
+**Variants:**
+- Default state: Large circular button, solid fill, "Listen" text or mic icon
+- Recording state: Animated waveform overlay, "Recording..." text
+- Processing state: Spinner animation, "Identifying..." text
+
+**States:** Default, Pressed, Recording, Processing, Disabled (if needed for error scenarios)
+
+**Usage Guidelines:**
+- Always center-aligned on Main Screen
+- Minimum size: 120pt diameter (mobile), larger on tablets
+- Single instance per screen (never multiple primary CTAs)
+- Animation transitions smoothly between states without jarring changes
+
+---
+
+#### Component 2: Result Card
+
+**Purpose:** Display verse identification results with metadata
+
+**Variants:**
+- High confidence card: Single card, prominent styling, checkmark indicator
+- Medium confidence card: Multiple stacked cards, slightly subdued styling
+- Error card: Different color treatment, friendly icon
+
+**States:** Default, Hover (web), Pressed, Selected
+
+**Usage Guidelines:**
+- Always tappable as a whole unit (entire card is interactive area)
+- Arabic text uses Uthmani script, Latin text uses UI font
+- Confidence indicator should be subtle—icon + color tint, not percentage numbers
+- Preview text limited to first 2-3 words to avoid overwhelming user
+
+---
+
+#### Component 3: Feedback Buttons (Thumbs Up/Down)
+
+**Purpose:** Collect explicit user feedback on identification accuracy
+
+**Variants:**
+- Thumbs up (positive feedback)
+- Thumbs down (negative feedback)
+
+**States:** Default, Pressed, Selected (filled icon after tap)
+
+**Usage Guidelines:**
+- Always paired together (never just one)
+- Small, unobtrusive size (~32pt touch target)
+- Positioned at bottom of result cards, never blocking content
+- Single-tap interaction—no confirmation dialog needed
+- Visual feedback on tap (icon fills in, subtle haptic feedback)
+
+---
+
+#### Component 4: Secondary Action Button
+
+**Purpose:** Supporting actions like "Try Again," "None of these," "Back to Home"
+
+**Variants:**
+- Outlined button (medium emphasis)
+- Text button (low emphasis)
+
+**States:** Default, Pressed, Disabled
+
+**Usage Guidelines:**
+- Use outlined style for important secondary actions ("Try Again")
+- Use text-only style for tertiary actions ("Back to Home")
+- Never more prominent than primary action button
+- Consistent sizing across app (~48pt height mobile)
+
+---
+
+#### Component 5: Toggle Switch (Settings)
+
+**Purpose:** Binary on/off controls for settings like location sharing
+
+**Variants:**
+- iOS style: Cupertino switch
+- Android style: Material switch
+
+**States:** On, Off, Disabled
+
+**Usage Guidelines:**
+- Platform-native styling (don't force consistency across iOS/Android)
+- Always accompanied by clear label text
+- Changes take effect immediately (no "Save" button)
+- Include explanatory subtext when needed
+
+---
+
+#### Component 6: Modal Sheet (Donation, Onboarding)
+
+**Purpose:** Overlay UI for flows that don't require full-screen navigation
+
+**Variants:**
+- Bottom sheet (mobile): Slides up from bottom
+- Modal dialog (tablet/web): Centered overlay with backdrop
+
+**States:** Entering, Displayed, Exiting
+
+**Usage Guidelines:**
+- Dismissable via backdrop tap, swipe down, or explicit close button
+- Max height: 80% of screen (never full-screen)
+- Clear visual hierarchy with title, content, primary action
+- Used sparingly—only for donation flow and optional onboarding
+
+---
+
+#### Component 7: Loading Indicator
+
+**Purpose:** Communicate processing state during STT API calls
+
+**Variants:**
+- Spinner (circular progress indicator)
+- Linear progress bar (if duration is estimable)
+
+**States:** Indeterminate (default), Determinate (if API provides progress)
+
+**Usage Guidelines:**
+- Platform-native styling (Material/Cupertino)
+- Appears during Recording → Results transition
+- Accompanied by text: "Identifying verse..." for clarity
+- Timeout after 10 seconds with error message
+
+---
+
+#### Component 8: Waveform Animation
+
+**Purpose:** Provide visual feedback during audio recording
+
+**Variants:**
+- Active recording: Animated bars responding to audio amplitude
+- Processing: Static or subtle pulse animation
+
+**States:** Recording, Processing
+
+**Usage Guidelines:**
+- Reassures user that microphone is capturing audio
+- Animation should feel smooth (60fps) without draining battery
+- Color matches primary brand color for consistency
+- Consider using existing Flutter packages (e.g., `flutter_sound` visualizer) rather than custom implementation
+
+---
+
+#### Component 9: Error State Component
+
+**Purpose:** Display user-friendly error messages with recovery actions
+
+**Variants:**
+- Low confidence retry: Encouraging tone, "Try quieter space"
+- Network error: Technical but friendly, "Check connection"
+- Server error: Apologetic, "Try again in a moment"
+
+**States:** Displayed, Dismissed
+
+**Usage Guidelines:**
+- Always include actionable recovery step
+- Icon should be informative, not alarming (avoid red X)
+- Primary action button: "Try Again" for easy recovery
+- Copy should be empathetic, never blame user
+
+---
+
+#### Component 10: Donation Button
+
+**Purpose:** Encourage voluntary Sadaqah contributions
+
+**Variants:**
+- Primary placement (Main Screen): Medium prominence, positive copy
+- Secondary placement (Settings): Text link style
+
+**States:** Default, Pressed
+
+**Usage Guidelines:**
+- Positive, inviting copy: "Support This Work" not "Donate"
+- Never use guilt-inducing language or dark patterns
+- Always optional—no features locked behind donations
+- Consider iconography: heart, hands, or Islamic giving symbols
+
+---
+
+## Branding & Style Guide
+
+### Visual Identity
+
+**Brand Guidelines:** No existing formal brand guidelines. This specification establishes Lawh's foundational visual identity for MVP. Brand reflects spiritual simplicity, trustworthiness, and Islamic cultural values.
+
+**Brand Personality:**
+- Serene and contemplative (not playful or energetic)
+- Trustworthy and transparent (never manipulative)
+- Respectful and culturally aware (honors sacred content)
+- Modern but timeless (avoids trendy design)
+
+### Color Palette
+
+#### Light Mode (Default)
+
+| Color Type | Hex Code | Usage |
+|------------|----------|-------|
+| Primary | #2D5016 | Dark lemon green - Main actions, "Listen" button, active states |
+| Secondary | #FFFAFA | Snow white - Backgrounds, cards, clean surfaces |
+| Accent | #D4AF37 | Gold - Highlights, success states, confidence indicators |
+| Success | #4CAF50 | Positive feedback, high confidence indicators |
+| Warning | #FF9800 | Medium confidence indicators, caution messages |
+| Error | #F44336 | Errors, destructive actions (minimal use) |
+| Neutral Dark | #333333 | Primary text |
+| Neutral Medium | #666666 | Secondary text |
+| Neutral Light | #E0E0E0 | Borders, dividers |
+| Background | #F5F5F5 | App background |
+| Surface | #FFFFFF | Card backgrounds |
+
+#### Dark Mode
+
+| Color Type | Hex Code | Usage |
+|------------|----------|-------|
+| Primary | #4A7C2B | Lighter green - Main actions (increased brightness for dark bg) |
+| Secondary | #1E1E1E | Dark surface - Backgrounds, cards |
+| Accent | #E6C657 | Brighter gold - Highlights (enhanced visibility on dark) |
+| Success | #66BB6A | Lighter success green |
+| Warning | #FFA726 | Brighter orange |
+| Error | #EF5350 | Slightly muted red |
+| Neutral Dark | #E0E0E0 | Primary text (inverted from light mode) |
+| Neutral Medium | #B0B0B0 | Secondary text |
+| Neutral Light | #424242 | Borders, dividers |
+| Background | #121212 | App background (true black causes OLED burn-in) |
+| Surface | #1E1E1E | Card backgrounds |
+
+**Dark Mode Implementation Notes:**
+- Respect platform dark mode settings (iOS system appearance, Android dark theme)
+- All colors adjusted for sufficient contrast on dark backgrounds (maintain 4.5:1 minimum)
+- True black (#000000) avoided for backgrounds—use #121212 to prevent OLED burn-in
+- Primary green lightened in dark mode for better visibility
+- Consider user preference override in Settings (future enhancement)
+
+**Color Usage Notes:**
+- Primary green (#2D5016) used sparingly for maximum impact on key actions
+- White/neutral backgrounds dominate to create calm, spacious feel
+- Gold accent used for moments of delight (successful identification, donation thank-you)
+- Avoid red except for genuine errors—never use as CTA color
+- Ensure all color combinations meet 4.5:1 contrast ratio minimum
+
+### Typography
+
+#### Font Families
+
+- **Primary (UI Text):** San Francisco (iOS), Roboto (Android), System Font Stack (Web)
+- **Secondary (Arabic Quran Text):** Developer selects from high-quality Quranic fonts (recommended: UthmanicHafs, KFGQPC Uthmanic Script, Scheherazade New, or Amiri Quran)
+- **Monospace:** SF Mono (iOS), Roboto Mono (Android) - used only for technical info if needed
+
+**Font Selection Rationale:**
+- Platform-native fonts ensure optimal rendering and familiarity
+- Uthmani script is the traditional Quranic standard (matches printed Mushaf)
+- No custom web fonts to load—faster performance, lower bandwidth
+
+**Quran Font Selection Guidelines for Developer:**
+- Must be a traditional Uthmani-style script matching printed Mushaf
+- Should include proper Quranic diacritical marks (tajweed)
+- License must permit commercial mobile app usage
+- Test rendering quality at 20-24pt size on both platforms
+- Popular options: UthmanicHafs (most common), KFGQPC, Scheherazade New (open source), Amiri Quran
+- Final choice at developer discretion based on availability and rendering quality
+
+#### Type Scale
+
+| Element | Size | Weight | Line Height |
+|---------|------|--------|-------------|
+| H1 | 32pt | Bold (700) | 40pt |
+| H2 | 24pt | Semibold (600) | 32pt |
+| H3 | 20pt | Semibold (600) | 28pt |
+| Body | 16pt | Regular (400) | 24pt |
+| Small | 14pt | Regular (400) | 20pt |
+| Caption | 12pt | Regular (400) | 16pt |
+| Arabic Text (Quran) | 20-24pt | Regular | 1.8x (generous spacing for readability) |
+
+**Typography Usage Guidelines:**
+- H1: Screen titles (rarely used, mostly navigation-free app)
+- H2: Surah names, major section headers
+- H3: Subsection headers, card titles
+- Body: Primary UI text, descriptions, labels
+- Small: Secondary information, metadata
+- Caption: Fine print, disclaimers, timestamps
+- Arabic Quran text sized larger than body text for prominence and readability
+
+**Accessibility Considerations:**
+- All text sizes are base values; actual rendering respects platform Dynamic Type/font scaling
+- Line heights provide generous spacing for readability (1.5x minimum)
+- Never use font sizes below 12pt except for legal fine print
+
+### Iconography
+
+**Icon Library:** Platform-native icon sets (SF Symbols for iOS, Material Icons for Android) supplemented with custom Islamic geometric patterns where needed
+
+**Usage Guidelines:**
+- Prefer simple, geometric icons over illustrative/skeuomorphic
+- Avoid human/animal imagery (adheres to conservative Islamic design preferences)
+- Icon sizes: 24pt (standard), 32pt (prominent), 16pt (small)
+- Icons always paired with text labels for clarity (icon-only buttons used sparingly)
+- Custom icons for: microphone/listen, Quran/book, donation/giving, settings
+- Use outline style by default; filled style for selected/active states
+
+**Islamic Pattern Considerations:**
+- Optional: Subtle Islamic geometric patterns for backgrounds (low opacity, non-intrusive)
+- Patterns should never distract from content or reduce text legibility
+- Use sparingly—only on Main Screen background if at all
+
+### Spacing & Layout
+
+**Grid System:** 8pt grid system (all spacing, padding, margins in 8pt increments)
+
+**Base Unit:** 8pt
+- Tight spacing: 8pt
+- Standard spacing: 16pt
+- Comfortable spacing: 24pt
+- Generous spacing: 32pt
+- Extra generous: 40pt+
+
+**Spacing Scale:**
+- 4pt: Micro spacing (icon-to-text gap)
+- 8pt: Tight (related elements)
+- 16pt: Standard (default component padding)
+- 24pt: Comfortable (section separation)
+- 32pt: Generous (major layout divisions)
+- 48pt+: Screen margins (top/bottom breathing room)
+
+**Layout Principles:**
+- Generous whitespace creates calm, focused experience
+- Centered content for primary actions (symmetry conveys stability)
+- Left-aligned text blocks (right-aligned for Arabic in RTL mode)
+- Safe area insets respected on iOS (notch, home indicator)
+- Minimum touch targets: 44x44pt (iOS), 48x48dp (Android)
+
+**Responsive Breakpoints (for future web version):**
+- Mobile: 320-767px
+- Tablet: 768-1024px
+- Desktop: 1025px+
+
+#### Islamic Geometric Pattern Implementation
+
+**Main Screen Background:**
+- Subtle Islamic geometric pattern overlay on background
+- Pattern opacity: 3-5% maximum (barely visible, creates texture without distraction)
+- Pattern style: Simple repeating geometric tessellation (stars, hexagons, interlocking shapes)
+- Color: Tint of primary green (#2D5016) in light mode, lighter green in dark mode
+- Implementation: SVG pattern or PNG texture, tiled seamlessly
+- Avoid overly complex patterns—simplicity maintains spiritual minimalism
+
+**Pattern Usage Guidelines:**
+- Only use on Main Screen background (not on Results, Settings, or Quran Reader)
+- Pattern must never reduce text legibility or interfere with UI elements
+- Should feel like a subtle texture, not a prominent design element
+- Alternative: Use solid color if pattern testing shows distraction
+
+**Resources for Patterns:**
+- Consider Islamic geometric pattern generators or public domain Islamic art sources
+- Keep file size minimal (< 50KB for pattern tile)
+- Test on both light and dark modes to ensure visibility is appropriate
+
+---
+
+## Accessibility Requirements
+
+### Compliance Target
+
+**Standard:** Basic accessibility for MVP with progressive enhancement toward WCAG 2.1 Level AA compliance in Phase 2
+
+**MVP Scope:** Focus on fundamental usability for users with:
+- Visual impairments (low vision, color blindness)
+- Motor impairments (reduced dexterity, touch accuracy)
+- Platform accessibility settings users (font scaling, display accommodations)
+
+**Phase 2 Scope (Deferred):** Full screen reader support, comprehensive keyboard navigation, advanced assistive technology integration
+
+### Key Requirements
+
+**Visual:**
+
+- **Color contrast ratios:** Minimum 4.5:1 for all text and interactive elements; 3:1 for large text (18pt+) and UI components
+  - Test all light mode and dark mode color combinations
+  - Ensure Primary green (#2D5016) on white backgrounds meets contrast requirements
+  - Confidence indicators must not rely solely on color (use icons + text labels)
+
+- **Focus indicators:** Visible focus states for all interactive elements with 2pt outline in contrasting color
+  - Ensure focus order follows logical reading sequence
+  - Never remove focus indicators for aesthetic reasons
+
+- **Text sizing:** Respect platform Dynamic Type (iOS) and Font Scaling (Android)
+  - Test UI layout at 200% text scale to ensure no content truncation
+  - Arabic Quran text must remain readable at all scaling levels
+  - Minimum base text size: 14pt (never smaller except legal disclaimers)
+
+**Interaction:**
+
+- **Keyboard navigation:** Basic support for web version in Phase 2 (not priority for mobile MVP)
+  - Tab order follows visual hierarchy
+  - Enter/Space activates buttons and links
+  - Escape dismisses modals
+
+- **Screen reader support:** Deferred to Phase 2, but prepare foundations
+  - Use semantic HTML for web version
+  - Label all interactive elements with descriptive text
+  - Provide alternative text for icons and images (even if screen reader not fully tested in MVP)
+
+- **Touch targets:** Minimum 44x44pt (iOS) / 48x48dp (Android) for all interactive elements
+  - Include padding/margin around small icons to meet minimum size
+  - Feedback buttons (thumbs up/down) must meet this requirement despite appearing small
+  - Ensure adequate spacing between adjacent touch targets (minimum 8pt gap)
+
+**Content:**
+
+- **Alternative text:** All icons paired with text labels or semantic descriptions
+  - "Listen" button includes both icon and text
+  - Feedback buttons have accessible labels (not just thumbs icons)
+  - Loading states announce "Identifying verse..." to provide context
+
+- **Heading structure:** Logical heading hierarchy for screen readers (future enhancement)
+  - H1: Screen titles (Main Screen, Settings, etc.)
+  - H2: Major sections (Results, verse cards)
+  - H3: Subsections as needed
+
+- **Form labels:** All input fields have visible, persistent labels (applies to future features)
+  - Never use placeholder text as the only label
+  - Required fields marked clearly
+
+### Testing Strategy
+
+**MVP Testing (Before Launch):**
+1. **Color contrast audit:** Use WebAIM Contrast Checker or similar tool to validate all color combinations
+2. **Text scaling test:** Test app at 200% font size on both iOS and Android devices
+3. **Touch target audit:** Measure all interactive elements with device inspection tools
+4. **Dark mode validation:** Ensure all screens render correctly and meet contrast requirements in dark mode
+5. **Manual testing:** Use app with platform accessibility features enabled (larger text, bold text, reduce motion)
+
+**Phase 2 Testing (Post-MVP):**
+- Screen reader testing with VoiceOver (iOS) and TalkBack (Android)
+- Keyboard navigation testing on web version
+- Third-party accessibility audit (if budget permits)
+- User testing with individuals who use assistive technologies
+
+**Ongoing Monitoring:**
+- Include accessibility checks in code review process
+- Test new features with basic accessibility requirements before merge
+- Monitor user feedback for accessibility-related issues
+
+---
+
+## Responsiveness Strategy
+
+### Breakpoints
+
+| Breakpoint | Min Width | Max Width | Target Devices |
+|------------|-----------|-----------|----------------|
+| Mobile (Small) | 320px | 479px | iPhone SE, small Android phones |
+| Mobile (Standard) | 480px | 767px | iPhone 14/15, standard Android phones |
+| Tablet | 768px | 1024px | iPad, Android tablets in portrait |
+| Desktop (Web - Phase 2) | 1025px | - | Desktop browsers, tablets in landscape |
+
+**MVP Priority:** Mobile (Small) and Mobile (Standard) breakpoints only—optimize for phones first
+
+**Tablet Considerations:** Basic tablet support for MVP (layout scales up, no custom tablet UI), enhanced in Phase 2
+
+**Desktop (Web):** Deferred to Phase 2 entirely
+
+### Adaptation Patterns
+
+**Layout Changes:**
+
+- **Mobile (320-767px):** Single-column layout, full-width components
+  - Main Screen: "Listen" button centered, fills ~60% of screen width
+  - Results Screen: Stacked verse cards, full width with 16pt side margins
+  - Quran Reader: Full-width text, comfortable reading margins (24pt)
+  - Settings: Single-column list, full-width items
+
+- **Tablet (768-1024px):** Maintain mobile layout with increased margins
+  - Content max-width: 600px, centered horizontally
+  - Larger touch targets and padding (scale up by 1.2x)
+  - Quran Reader: Wider margins (32pt+) for comfortable reading
+  - Modal sheets: 600px max width instead of full width
+
+- **Desktop (Phase 2, 1025px+):** Constrained content width with adaptive navigation
+  - Content max-width: 800px, centered
+  - Consider sidebar navigation if app expands beyond MVP
+  - Multiple-column layout for settings and results if beneficial
+
+**Navigation Changes:**
+
+- **Mobile:** Bottom-aligned primary actions, top-right settings icon
+  - "Listen" button in center/lower third for thumb reachability
+  - Back buttons in top-left (iOS standard) or hardware back button (Android)
+
+- **Tablet:** Same navigation pattern as mobile (no dramatic changes for MVP)
+  - Consider split-view navigation in Phase 2 for landscape orientation
+
+- **Desktop (Phase 2):** Traditional top navigation bar or sidebar
+  - Mouse/trackpad interactions replace touch gestures
+  - Hover states become relevant
+
+**Content Priority:**
+
+- **Mobile:** Single task focus—only show what's needed for current step
+  - Main Screen: Listen button dominates, Sadaqah button secondary
+  - Results Screen: Verse results occupy 70% of screen, feedback buttons 30%
+  - Hide non-essential info until tapped (e.g., full verse text in Reader only)
+
+- **Tablet:** More breathing room, can show additional context
+  - Display verse preview text without truncation
+  - Show more surrounding context in Quran Reader initially
+
+- **Desktop (Phase 2):** Richer information density
+  - Consider showing search history sidebar
+  - Display multiple verses in side-by-side comparison
+
+**Interaction Changes:**
+
+- **Mobile:** Touch-first, gesture-driven
+  - Tap to interact, swipe to dismiss modals
+  - Large touch targets (44x44pt minimum)
+  - Pull-to-refresh on Main Screen (optional enhancement)
+
+- **Tablet:** Touch with occasional mouse/keyboard
+  - Same touch targets as mobile
+  - Support for external keyboard input if present
+
+- **Desktop (Phase 2):** Mouse and keyboard primary
+  - Hover states for buttons and cards
+  - Keyboard shortcuts for common actions
+  - Click interactions replace taps
+
+**Orientation Handling:**
+
+- **Portrait (Primary):** Default design optimized for portrait
+  - Most users will hold phone vertically in mosques/lectures
+  - "Listen" button and results display designed for portrait aspect ratio
+
+- **Landscape (Secondary):** Support landscape but don't optimize heavily for MVP
+  - Layout adapts to horizontal aspect ratio gracefully
+  - Quran Reader benefits from landscape (wider text columns)
+  - Consider locking Recording screen to portrait (prevents awkward mic positioning)
+
+---
+
+## Animation & Micro-interactions
+
+### Motion Principles
+
+**1. Purposeful, Not Decorative**
+Every animation must serve a functional purpose—providing feedback, guiding attention, or communicating state change. Never animate purely for visual flair.
+
+**2. Calm and Contemplative**
+Motion should feel serene and unhurried, matching the spiritual context. Avoid bouncy, playful, or aggressive easing curves.
+
+**3. Respect "Reduce Motion" Preferences**
+Always honor platform accessibility settings (iOS Reduce Motion, Android Remove Animations). Provide instant state changes when motion is disabled.
+
+**4. Performance First**
+Target 60fps for all animations. Drop or simplify animations on lower-end devices rather than accepting janky motion.
+
+**5. Subtle Transitions Over Big Gestures**
+Prefer gentle fades and subtle slides over dramatic zooms or spins. Think "gentle ripple" not "fireworks."
+
+### Key Animations
+
+- **Button Press Feedback:** Subtle scale down (0.95x) with immediate spring back (Duration: 150ms, Easing: Ease-out)
+  - Applies to: "Listen" button, result cards, feedback buttons, all tappable elements
+  - Provides tactile feedback that action was registered
+  - Accompanied by subtle haptic feedback (light impact)
+
+- **Listen Button State Transitions:** Smooth morphing between states (Duration: 300ms, Easing: Ease-in-out)
+  - Default → Recording: Button expands slightly, mic icon fades to waveform
+  - Recording → Processing: Waveform fades to spinner
+  - Processing → Results: Button fades out as Results screen slides in
+  - Prevents jarring state jumps that break concentration
+
+- **Waveform Animation (Recording):** Continuous organic movement responding to audio input (Duration: Continuous, Easing: N/A - driven by audio amplitude)
+  - Visual feedback that microphone is actively capturing
+  - Bars animate up/down based on volume levels
+  - Smooth interpolation, never jittery or laggy
+  - Respects "Reduce Motion" by showing static bars with subtle pulse
+
+- **Screen Transitions:** Slide-in from right with subtle fade (Duration: 350ms, Easing: Ease-out cubic)
+  - Main → Results: Results screen slides in from right, Main fades back
+  - Results → Quran Reader: Reader slides in from right
+  - Back navigation: Reverse slide (left) with fade
+  - Standard mobile navigation pattern feels familiar and predictable
+
+- **Result Card Entry:** Staggered fade-in with subtle upward slide (Duration: 400ms, Easing: Ease-out, Stagger delay: 100ms between cards)
+  - High confidence (1 card): Single card fades in with 8pt upward movement
+  - Medium confidence (2-3 cards): Cards appear sequentially with 100ms delay
+  - Creates sense of information "settling into place"
+  - Draws eye naturally from first to subsequent results
+
+- **Loading Spinner:** Smooth continuous rotation (Duration: 1200ms per rotation, Easing: Linear)
+  - Appears during STT API processing
+  - Standard platform spinner (Material/Cupertino) for familiarity
+  - Accompanied by "Identifying verse..." text for context
+  - Fades in after 500ms delay (prevents flash for fast API responses)
+
+- **Feedback Button Selection:** Fill animation with haptic response (Duration: 200ms, Easing: Ease-out)
+  - Thumbs up/down icons transition from outline to filled state
+  - Subtle color shift to accent color
+  - Medium haptic feedback (success/warning vibration)
+  - Visual and tactile confirmation of feedback submission
+
+- **Modal Sheet Entry/Exit:** Slide up from bottom with backdrop fade (Duration: 350ms, Easing: Ease-out cubic)
+  - Donation modal, onboarding sheets slide up smoothly
+  - Backdrop fades in simultaneously (opacity 0 → 0.5)
+  - Dismissal: Reverse animation (slide down, backdrop fade out)
+  - Supports gesture dismissal (swipe down)
+
+- **Error State Appearance:** Gentle shake with fade-in (Duration: 500ms, Easing: Ease-out)
+  - Error screen enters with subtle 4-8px horizontal shake (2 cycles)
+  - Draws attention without being alarming
+  - Accompanied by error message fade-in
+  - Respects "Reduce Motion" by showing instant fade without shake
+
+- **Confidence Indicator Pulse:** Subtle breathing animation for high confidence (Duration: 2000ms, Easing: Ease-in-out, Loop: Continuous)
+  - High confidence checkmark icon pulses gently (scale 1.0 ↔ 1.05)
+  - Very subtle—user may not consciously notice but feels reassured
+  - Only on high confidence results
+  - Stops after 3 cycles to avoid distraction
+
+- **Text Selection Highlight (Quran Reader):** Smooth color transition when verse is highlighted (Duration: 300ms, Easing: Ease-in-out)
+  - Identified verse background color transitions from white/dark to subtle accent tint
+  - Scroll animation to bring highlighted verse into center view (Duration: 600ms, Easing: Ease-in-out)
+  - Ensures user sees identified verse immediately when Reader opens
+
+---
+
+## Performance Considerations
+
+### Performance Goals
+
+- **App Launch Time:** Cold start ≤2 seconds, warm start ≤1 second
+- **Recording Start Latency:** ≤300ms from button tap to recording begins
+- **API Response Time:** Results displayed within 5 seconds of recording stop
+- **Quran Reader Load Time:** Text displays within 1 second of selection
+- **Animation Frame Rate:** 60fps minimum for all animations, 120fps on capable devices
+- **Memory Usage:** Stay under 150MB RAM during normal operation
+- **Battery Impact:** Minimize battery drain during recording and processing
+- **Network Efficiency:** Minimize data usage for users on limited plans or slow connections
+
+### Design Strategies
+
+**Strategy 1: Progressive Loading**
+- Show Main Screen immediately, load secondary resources in background
+- Quran text database downloaded on first launch with progress indicator
+- Cache STT results locally to enable instant "Try Again" without re-processing
+- Lazy-load Settings content only when user opens Settings screen
+
+**Strategy 2: Audio Optimization**
+- Record at 16kHz sample rate (sufficient for speech, lower file size than 44.1kHz)
+- Use AAC or Opus compression before upload (reduce network bandwidth 50-70%)
+- Release microphone permissions immediately after recording stops
+- Pre-allocate audio buffers to avoid runtime memory allocation delays
+
+**Strategy 3: UI Rendering Optimization**
+- Use Flutter's const constructors for static widgets (reduces rebuild overhead)
+- Implement efficient list rendering for Quran Reader (virtualized scrolling)
+- Avoid complex SVG patterns if they cause frame drops (test Islamic background pattern performance)
+- Cache rendered text glyphs for Arabic Quran font (GPU texture cache)
+
+**Strategy 4: Network Request Optimization**
+- Implement request timeout of 10 seconds (fail fast rather than hang)
+- Queue feedback submissions and batch upload when network available
+- Use HTTP/2 for Azure API calls (multiplexing reduces latency)
+- Compress JSON payloads with gzip
+
+**Strategy 5: Caching Strategy**
+- Cache Quran text locally using SQLite or JSON file (5MB one-time download)
+- Cache recent search results for 24 hours (enables offline review)
+- Cache user preferences locally (no server sync needed for MVP)
+- Implement cache invalidation for Quran text updates (check version on app launch)
+
+**Strategy 6: Battery-Conscious Design**
+- Disable waveform animation when battery <20% (replace with static indicator)
+- Reduce animation complexity in low-power mode
+- Release wake locks immediately after API calls complete
+- Avoid continuous background processes (no polling, use push notifications in Phase 2)
+
+**Strategy 7: Error State Performance**
+- Pre-load error screen assets to avoid delay when errors occur
+- Instant fallback to cached results if network fails
+- Optimistic UI updates (show feedback immediately, sync in background)
+
+**Strategy 8: Image and Asset Optimization**
+- Use vector icons (SVG/Flutter Icons) instead of rasterized PNGs where possible
+- Compress Islamic pattern background image to <50KB
+- Use WebP format for any raster images (better compression than PNG/JPEG)
+- Implement lazy loading for donation modal assets (only load when user opens modal)
+
+**Testing Benchmarks:**
+- Test on low-end Android device (e.g., Samsung Galaxy A10s, 2GB RAM)
+- Test on iPhone SE 2nd gen (represents older but still common iOS device)
+- Simulate slow 3G network conditions (many mosque environments have poor connectivity)
+- Profile app with Flutter DevTools to identify performance bottlenecks
+- Monitor frame rendering times during animations
+
+**Performance Monitoring (Post-Launch):**
+- Track app launch time metrics via Firebase Performance Monitoring
+- Monitor API response times and timeout rates
+- Collect crash reports to identify performance-related issues
+- User feedback on "slow" or "laggy" experiences
+
+---
+
+## Next Steps
+
+### Immediate Actions
+
+1. **Review and approve this UI/UX specification** with stakeholders (you as product owner/developer)
+   - Validate that all screens, flows, and design decisions align with your vision
+   - Flag any concerns or needed adjustments before development begins
+
+2. **Set up Flutter development environment** and initialize project structure
+   - Create `/mobile` directory with Flutter project scaffolding
+   - Configure platform-specific settings (iOS bundle ID, Android package name)
+   - Set up version control and branching strategy
+
+3. **Implement design system foundations** (theme, colors, typography)
+   - Create Flutter theme configuration with light/dark mode color palettes
+   - Configure typography scale and platform-specific fonts
+   - Set up 8pt spacing constants for consistent layout
+
+4. **Acquire Quran text database** and prepare for local caching
+   - Download Quran text from Tanzil.net or EveryAyah.com
+   - Verify licensing permits commercial mobile app usage
+   - Structure database for efficient verse lookup by Surah:Ayah reference
+
+5. **Create low-fidelity prototypes** of Main Screen and Results Screen in Flutter
+   - Implement basic layout without final styling
+   - Test navigation flow between screens
+   - Validate that component hierarchy makes sense
+
+6. **Handoff to Design Architect** for frontend architecture specification
+   - This UI/UX spec provides the "what" and "why" of the interface
+   - Design Architect will define the "how" (state management, component architecture, data flow)
+   - Schedule alignment meeting to discuss technical implementation approach
+
+7. **Begin STT accuracy testing** in parallel with UI development
+   - Test Azure Speech-to-Text with sample Quranic recitations
+   - Validate 70%+ transcription accuracy assumption from PRD
+   - This is your highest-risk assumption—validate immediately
+
+### Design Handoff Checklist
+
+- [x] All user flows documented (Core identification, Feedback, Donation, Location)
+- [x] Component inventory complete (10 core components defined)
+- [x] Accessibility requirements defined (basic MVP scope with Phase 2 roadmap)
+- [x] Responsive strategy clear (mobile-first, tablet scaling, desktop Phase 2)
+- [x] Brand guidelines incorporated (colors, typography, Islamic pattern background)
+- [x] Performance goals established (5-second identification, <2s launch, 60fps animations)
+- [ ] Visual design mockups created (Deferred - designing directly in Flutter)
+- [ ] Quran font selected by developer
+- [ ] Islamic pattern background asset created or sourced
+- [ ] Platform-specific design variations documented (Material vs Cupertino)
+
+**Items for Developer Attention:**
+- Choose Quranic font from recommended options (UthmanicHafs, KFGQPC, Scheherazade, Amiri)
+- Source or generate Islamic geometric pattern for Main Screen background
+- Test waveform animation performance on mid-range Android device
+- Validate that all color contrast ratios meet 4.5:1 minimum requirement
+- Set up Flutter Semantics widgets from the start (prepares for Phase 2 accessibility)
+
+### Open Questions for Resolution
+
+1. **Onboarding screens:** Build as "nice to have" or skip entirely for MVP? (Recommendation: Skip for MVP, add if beta testers show confusion)
+
+2. **Dark mode default behavior:** Should app default to system setting or always launch in light mode? (Recommendation: Respect system setting automatically)
+
+3. **Donation preset amounts:** Fixed at $5, $10, $25 or allow full customization? (Recommendation: Start with presets + custom field for MVP simplicity)
+
+4. **"None of these" behavior:** Should it immediately trigger retry or show confirmation prompt? (Recommendation: Immediate retry with encouraging message)
+
+5. **Waveform animation complexity:** Use simple bar visualization or more sophisticated audio visualizer? (Recommendation: Simple bars for MVP, enhance in Phase 2 if desired)
+
+6. **Islamic pattern prominence:** 3% opacity or 5% opacity? (Recommendation: Start at 3%, increase to 5% if too subtle during testing)
+
+7. **Tablet-specific optimizations:** Any custom tablet UI for MVP or purely responsive scaling? (Recommendation: Responsive scaling only, optimize in Phase 2)
+
+8. **Error retry limit:** Should app limit retry attempts or allow unlimited? (Recommendation: Unlimited for MVP, add rate limiting if abuse detected)
+
+---
+
+**Document Status:** ✅ Complete and ready for implementation
+
+**Next Owner:** Development Team (Design Architect for frontend architecture, Developer for implementation)
+
+**Estimated Development Timeline:** 2-3 weeks for UI implementation based on your 4-week MVP timeline (Week 1: setup + foundations, Week 2-3: screen implementation and refinement, Week 4: testing and polish)
+
+---
+
+*This UI/UX specification serves as the blueprint for Lawh's user interface, capturing design intent, user flows, component specifications, and performance goals. May this work contribute to connecting people with the words of the Quran.*

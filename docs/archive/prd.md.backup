@@ -1,0 +1,718 @@
+# Lawh Product Requirements Document (PRD)
+
+## Goals and Background Context
+
+### Goals
+
+- Launch Lawh MVP by February 14, 2026 that enables Muslims to identify Quranic verses from live recitations within seconds
+- Achieve 85%+ verse identification accuracy (correct verse in top 3 results) using Speech-to-Text and fuzzy matching
+- Acquire 1,000 active users within first 30 days post-launch through targeted marketing ($200 budget)
+- Validate cost sustainability by monitoring Azure STT costs against voluntary Sadaqah donations
+- Collect 5,000+ user searches with feedback to continuously improve matching algorithm
+- Deliver a privacy-first, culturally respectful user experience that builds trust within the Muslim community
+
+### Background Context
+
+Muslims worldwide hear beautiful Quranic recitations at mosques, during prayers, at religious lectures, and especially during Hajj and Umrah—but often cannot identify which verses are being recited in the moment. This "memory gap" (remembering the sound but not the reference) breaks spiritual connection and prevents deeper engagement with the Quran. Current solutions—manual searching, asking others, or giving up—all fail to solve the core problem of immediate verse identification.
+
+Existing apps like Tarteel AI (1M+ downloads) validate market demand but struggle with verse discovery accuracy. Lawh addresses this gap by using advanced Speech-to-Text with confidence-based fuzzy matching to identify verses from any reciter in real-time. The solution is now technically feasible because Arabic STT has finally reached the accuracy threshold needed for Quranic recitation recognition. The name "Lawh" (meaning "tablet") references Al-Lawh Al-Mahfuz (The Preserved Tablet), connecting the app's purpose to Islamic tradition.
+
+**Problem Validation Approach:**
+
+This PRD is based on the product owner's personal observations and anecdotal understanding of the problem space rather than formal user research (surveys, interviews, or focus groups). The problem statement represents a **hypothesis to be validated through MVP deployment and user feedback**.
+
+**Validation Criteria:**
+- If ≥75% of users provide positive feedback on verse identification accuracy (Goal #2), the problem is validated
+- If users return within 7 days at ≥40% rate (Goal #5), the solution provides ongoing value
+- If 1,000+ users adopt the app within 30 days (Goal #3), market demand is confirmed
+
+**Risk Acknowledgment:** Without formal user research, there is risk that the assumed problem (inability to identify verses) may not be as widespread or painful as hypothesized. The MVP approach mitigates this risk by enabling rapid validation with minimal investment (4 weeks, $200 marketing budget).
+
+### Change Log
+
+| Date | Version | Description | Author |
+|------|---------|-------------|---------|
+| 2026-01-19 | 1.0 | Initial PRD creation for Lawh | PM John |
+
+---
+
+## Requirements
+
+### Functional Requirements
+
+1. **FR1:** The system shall record audio for a minimum of 10 seconds and maximum of 15 seconds, then transcribe the recorded Arabic Quranic recitation using Azure Speech-to-Text API with Arabic language support and built-in noise suppression enabled. Recordings under 10 seconds shall prompt user to continue recording; recordings shall automatically stop at 15 seconds.
+
+2. **FR2:** The system shall implement an optimized text matching algorithm (Levenshtein distance, phonetic matching, or equivalent) that compares STT transcription output against a Quran text database (Madinah Mushaf from Tanzil.net or equivalent) to identify matching verses with confidence scoring in the fastest time possible.
+
+3. **FR3:** The system shall display search results using confidence-based logic: 1 result if algorithm confidence ≥90%, 2-3 results if confidence is 65-89%, and a "Could not identify verse - please try again" message if confidence <65%. (Note: Confidence score represents algorithm certainty; actual accuracy target of 85%+ correct verse in top 3 is measured in NFR3.)
+
+4. **FR4:** The system shall provide an in-app Quran reader displaying the Madinah Mushaf (Uthmani script) that opens to the identified verse location, allowing users to read the full context after identification.
+
+5. **FR5:** The system shall collect explicit feedback through thumbs up/down buttons and a "none of these" option on all search result screens.
+
+6. **FR6:** The system shall collect implicit feedback including which result was clicked and time spent viewing results.
+
+7. **FR7:** The system shall generate and store a device-based anonymous UUID on first app launch to link searches and feedback without identifying the user.
+
+8. **FR8:** The system shall request optional city/region location data via IP-based geolocation with clear disclosure of purpose ("Help us understand regional recitation preferences") and provide opt-in/opt-out toggle in settings.
+
+9. **FR9:** The system shall display a "Support Lawh (Sadaqah)" donation button accessible from the main screen and settings, integrated with a payment processor (Stripe or equivalent) that supports international donations.
+
+10. **FR10:** The system shall complete the cycle from recording completion to result display in ≤5 seconds for 90% of searches (excluding the 10-15 second recording duration).
+
+11. **FR11:** The system shall support cross-platform deployment on iOS (13+), Android (8.0+), and modern web browsers (Chrome, Safari, Firefox, Edge).
+
+12. **FR12:** The system shall store all user searches, feedback, and optional location data in a backend database for algorithm improvement and analytics.
+
+13. **FR13:** The system shall display user-friendly error messages for common failure scenarios including: STT API unavailable, poor audio quality detected, network connectivity lost, no verse match found (confidence <65%), and provide actionable recovery steps.
+
+14. **FR14:** The system shall perform client-side audio validation before API submission, checking minimum audio volume level and duration requirements (10-15 seconds), rejecting recordings that fail quality thresholds with user guidance.
+
+15. **FR15:** The system shall require active internet connectivity to function and display clear messaging when offline: "Internet connection required for Lawh to identify verses."
+
+### Non-Functional Requirements
+
+1. **NFR1:** The app shall launch from cold start to ready state in ≤2 seconds on supported devices.
+
+2. **NFR2:** The in-app Quran reader shall load and display the requested verse in ≤1 second after selection.
+
+3. **NFR3:** The system shall maintain 85%+ verse identification accuracy, defined as the correct verse appearing in the top 3 results. This measures actual algorithm performance against real user searches, distinct from confidence scoring in FR3.
+
+4. **NFR4:** Azure STT costs shall remain under $0.10 per search on average during MVP phase, optimizing audio processing and API usage.
+
+5. **NFR5:** All API communication between mobile/web clients and backend shall use HTTPS/TLS encryption.
+
+6. **NFR6:** User data storage shall implement pseudonymization using anonymous UUIDs, with no collection of real names, emails, or precise GPS coordinates without explicit consent.
+
+7. **NFR7:** The system shall comply with GDPR and CCPA requirements, providing user data export, deletion requests, and opt-out mechanisms.
+
+8. **NFR8:** The app shall meet App Store and Google Play privacy nutrition label requirements, clearly disclosing all data collection practices.
+
+9. **NFR9:** API keys, database credentials, and payment processing secrets shall be stored securely using environment variables or secure key management services, never committed to version control.
+
+10. **NFR10:** The backend API shall handle up to 2,000 searches per day without degraded performance or increased error rates, with peak capacity for 50 concurrent searches.
+
+11. **NFR11:** The text matching algorithm shall complete verse identification processing in ≤2 seconds after receiving STT transcription output.
+
+12. **NFR12:** The system shall log all errors, failed searches, and performance metrics to support debugging and continuous improvement.
+
+13. **NFR13:** User search data and feedback shall be retained for a minimum of 18 months for algorithm improvement, with user-initiated deletion available on request within 30 days.
+
+14. **NFR14:** The app shall support basic accessibility features including dynamic text sizing and minimum color contrast ratio of 4.5:1 for readability. Full screen reader compatibility (VoiceOver, TalkBack) and WCAG AA compliance deferred to Phase 2.
+
+15. **NFR15:** Azure Speech-to-Text noise suppression feature shall be enabled by default to improve recognition quality in real-world environments (mosques, lectures, outdoor spaces).
+
+16. **NFR16:** The PostgreSQL database shall have automated daily backups configured with a retention period of 30 days. Backups shall include all user data (users, searches, feedback, analytics) and Quran text database. Backup verification test shall be performed quarterly to ensure recoverability.
+
+17. **NFR17:** The system shall have defined disaster recovery objectives: Recovery Time Objective (RTO) of 4 hours maximum downtime, and Recovery Point Objective (RPO) of 24 hours maximum data loss. Database restoration procedure shall be documented and tested before production launch.
+
+---
+
+## User Interface Design Goals
+
+### Overall UX Vision
+
+Lawh's user experience embodies spiritual simplicity and immediate utility. The interface prioritizes speed and clarity over complexity, reflecting the sacred nature of its content. Users should feel confident and calm when using the app—no cognitive load, no distractions, just a clear path from "I heard something beautiful" to "now I can read it."
+
+The design philosophy follows these principles:
+- **Spiritual Minimalism:** Clean, uncluttered screens that respect the religious context
+- **Instant Clarity:** Every action has one clear outcome with no hidden menus or complex navigation
+- **Trust Through Transparency:** Confidence indicators and clear feedback build user trust
+- **Respectful Interaction:** No gamification, no manipulative patterns, no intrusive elements
+
+The overall feel should be: **serene, trustworthy, and effortless.**
+
+### Key Interaction Paradigms
+
+1. **One-Tap Recording:** Primary action is a prominent "Listen" button on the main screen—tap once to start, automatically stops at 15 seconds or tap again to complete early (if ≥10 sec)
+
+2. **Confidence-Aware Results:** Visual design adapts to system confidence—high confidence shows single result with prominent "This is the verse" messaging; medium confidence shows 2-3 options with clear selection affordances; low confidence shows encouraging retry message
+
+3. **Seamless Reading Flow:** Tapping a verse result immediately opens in-app Quran reader at that exact location, preserving scroll position and allowing natural reading continuation
+
+4. **Frictionless Feedback:** Thumbs up/down buttons are always visible but never intrusive—positioned naturally at bottom of results, never blocking content
+
+5. **Prominent Sadaqah Support:** "Support Lawh" donation button is prominently visible on main screen and accessible in settings, encouraging voluntary contributions without pressure
+
+6. **Contextual Location Collection:** Location data (city/region) is collected at the time of each search (tied to search context) rather than as a one-time permission, with clear opt-in/opt-out capability
+
+### Core Screens and Views
+
+From a product perspective, these are the critical screens necessary to deliver the PRD values and goals:
+
+1. **Main Screen (Listen/Home)**
+   - Large, centered "Listen" button (primary CTA)
+   - Visual feedback during 10-15 second recording (progress indicator, waveform animation)
+   - **Prominent "Support Lawh (Sadaqah)" button** (secondary CTA, clearly visible but not blocking primary action)
+   - Settings icon (top-right corner)
+
+2. **Results Screen**
+   - Verse identification(s) with confidence indicator
+   - Surah name + verse number (e.g., "Al-Baqarah 2:255")
+   - Preview text snippet (first few words in Arabic)
+   - Thumbs up/down feedback buttons
+   - "None of these" option (if multiple results)
+   - "Try again" button
+   - Tap result → opens Quran Reader
+
+3. **Quran Reader Screen**
+   - Full-page Madinah Mushaf text display
+   - Identified verse highlighted with subtle visual indicator
+   - Scrollable to read surrounding context
+   - Simple "Back to Search" navigation
+   - Minimal chrome/UI elements to focus on text
+
+4. **Settings Screen**
+   - Location sharing toggle with explanation ("Collected with each search to understand regional recitation preferences")
+   - Privacy policy link
+   - Data deletion request option
+   - About Lawh section
+   - Support/Feedback contact
+   - "Support Lawh (Sadaqah)" donation link
+
+5. **Error/Retry Screen**
+   - User-friendly error messaging (per FR13)
+   - Clear guidance: "Try recording in a quieter space" or "Check your internet connection"
+   - "Try Again" button prominently displayed
+
+6. **First-Launch Onboarding (Optional)**
+   - 2-3 screens maximum explaining: "Hear a verse → Tap Listen → Get the verse"
+   - Location permission explanation (collected with each search)
+   - Skippable without penalty
+
+### Accessibility: Basic for MVP
+
+Target: **Basic accessibility** for MVP, with WCAG AA compliance deferred to Phase 2
+
+**MVP Accessibility:**
+- Dynamic text sizing respecting platform preferences (iOS Dynamic Type, Android font scaling)
+- Minimum color contrast ratio 4.5:1 for all text
+- Touch targets minimum 44x44pt (iOS) / 48x48dp (Android)
+- No reliance on color alone for critical information (e.g., confidence indicators use text + color)
+
+**Deferred to Phase 2:**
+- Screen reader support (VoiceOver, TalkBack) - not priority for MVP
+- Full WCAG AA compliance testing
+- Keyboard navigation for web version
+
+**Rationale:** Prioritizes core functionality delivery within 4-week timeline while maintaining basic usability standards. Full accessibility features added post-MVP validation.
+
+### Branding
+
+**Visual Identity:**
+- **Color Palette:**
+  - Primary: Dark green (dark lemon shade) conveying growth, nature, and Islamic tradition
+  - Secondary: Snow white for clarity and purity
+  - Accent: Complementary warm tones (gold, cream) for highlights and interactive elements
+- **Typography:** Clean, highly readable sans-serif for UI (SF Pro/Roboto); traditional Arabic font (Uthmani script) for Quran text
+- **Iconography:** Simple, geometric icons avoiding representational imagery (culturally appropriate)
+- **Tone:** Respectful, helpful, never casual or playful
+
+**Cultural Considerations:**
+- No human/animal imagery (adhering to conservative Islamic design preferences)
+- Right-to-left (RTL) layout support for Arabic text
+- Color choices avoid culturally insensitive combinations
+- "Lawh" branding emphasizes connection to Islamic tradition (Al-Lawh Al-Mahfuz)
+
+### Target Device and Platforms: Mobile-First Cross-Platform
+
+**Primary Platforms (MVP Priority):**
+- **iOS (13+):** iPhone and iPad support, optimized for mobile-first usage
+- **Android (8.0+):** Phone and tablet support, cross-device compatibility
+
+**Secondary Platform (Stretch Goal/Phase 2):**
+- **Web (Modern Browsers):** Chrome, Safari, Firefox, Edge—responsive design for desktop and mobile web
+
+**Platform Prioritization for MVP:**
+- **Week 1-3:** Flutter mobile development (iOS + Android simultaneously)
+- **Week 3-4:** Testing, refinement, app store submission preparation
+- **Phase 2:** Web deployment using Flutter Web or separate React/Vue.js implementation
+
+**Design Approach:**
+- Mobile-first responsive design (most users will be on phones in mosques/outdoor environments)
+- Platform-specific UI patterns where appropriate (iOS navigation vs Android Material Design)
+- Consistent core functionality across all platforms when web launches
+
+---
+
+## Technical Assumptions
+
+### Repository Structure: Monorepo
+
+**Decision:** Single monorepo containing all platform code
+
+**Structure:**
+```
+lawh/
+├── mobile/          # Flutter mobile app (iOS + Android)
+├── web/             # Web version (Flutter Web or React/Vue - Phase 2)
+├── backend/         # Python FastAPI backend
+├── shared/          # Shared assets (Quran text database, constants)
+├── docs/            # Project documentation (PRD, architecture, etc.)
+└── scripts/         # Build, deployment, and utility scripts
+```
+
+**Rationale:**
+- Simplifies dependency management and versioning across platforms
+- Easier code sharing between mobile and web (Flutter shared widgets/logic)
+- Single CI/CD pipeline for all components
+- Solo developer benefits from unified tooling and workflow
+- Aligns with 4-week timeline—less overhead than managing multiple repos
+
+**Trade-offs:**
+- Larger repo size, but manageable for MVP scope
+- All teams need access to entire codebase (not an issue for solo developer)
+
+### Service Architecture: Monolithic Backend with Client Apps
+
+**Architecture Overview:**
+
+```
+[Mobile Apps (Flutter)]  ←→  [Backend API (FastAPI)]  ←→  [Azure STT]
+                                      ↓
+                              [Local Quran DB]
+                              [PostgreSQL]
+```
+
+**Components:**
+
+1. **Client Applications (Flutter Mobile)**
+   - iOS and Android native apps compiled from single Flutter codebase
+   - Handle UI/UX, audio recording, result display, Quran reader
+   - Communicate with backend via REST API over HTTPS
+   - Store anonymous UUID locally (device storage)
+
+2. **Backend API (Python FastAPI)**
+   - Single monolithic API handling all business logic
+   - Endpoints: `/search` (audio upload + identification), `/feedback`, `/donate`, `/quran` (verse retrieval)
+   - Integrates with Azure Speech-to-Text API
+   - Implements fuzzy matching algorithm (server-side)
+   - Manages user data, searches, feedback storage
+   - Deployed on DigitalOcean Droplet ($6/month) or Heroku ($7/month)
+
+3. **Local Quran Text Database**
+   - **CRITICAL IMPLEMENTATION NOTE:** Quran text is downloaded ONCE during backend setup and stored locally
+   - Source: Tanzil.net or EveryAyah.com (Madinah Mushaf, Uthmani script)
+   - Format: XML, JSON, or text files converted to PostgreSQL or file-based storage
+   - The fuzzy matching algorithm compares STT output against THIS local copy (not external API calls)
+   - Reasoning:
+     - Speed: Local lookup required to meet ≤2 second matching requirement (NFR11)
+     - Reliability: Cannot depend on external API availability for core functionality
+     - Cost: Eliminates API rate limits and potential usage fees
+     - Static data: Quran text doesn't change, so no need for real-time syncing
+   - Tanzil.net is ONLY queried during initial setup, never during user searches
+
+4. **External Services:**
+   - **Azure Speech-to-Text:** Transcription service (API calls from backend for each search)
+   - **PostgreSQL Database:** User searches, feedback, optional location data, analytics, and Quran text storage
+   - **Stripe API:** Payment processing for Sadaqah donations
+
+**Why Monolithic (not Microservices):**
+- MVP scope is small—no need for service decomposition
+- Solo developer—microservices add unnecessary complexity
+- Faster development and deployment (4-week timeline)
+- Easy to refactor into microservices in Phase 2+ if needed
+
+**Why Server-Side Matching (not Client-Side):**
+- Centralized algorithm updates without app redeployment
+- Collect training data for continuous improvement
+- Reduce mobile app size and processing load
+- Migrate to client-side in Phase 3 for offline mode if needed
+
+### Testing Requirements: Unit + Integration for Critical Paths
+
+**MVP Testing Strategy:**
+
+**Unit Testing:**
+- Backend fuzzy matching algorithm (90%+ coverage—this is critical)
+- API endpoints (request/response validation)
+- Audio validation logic (duration, quality checks)
+- Confidence scoring calculations
+
+**Integration Testing:**
+- End-to-end flow: audio upload → STT → matching → result display
+- Azure STT API integration (mocked for CI/CD, real calls in staging)
+- Database operations (CRUD for searches, feedback, user data)
+- Payment processing integration (Stripe test mode)
+- Local Quran database queries and verse retrieval
+
+**Manual Testing:**
+- Real-world audio samples with various reciters and audio quality
+- Cross-platform UI/UX (iOS, Android devices)
+- Accessibility features (text sizing, contrast)
+- App Store submission readiness
+
+**Out of Scope for MVP:**
+- End-to-end automated UI testing (Selenium, Appium) - time-intensive
+- Performance/load testing beyond basic validation
+- Security penetration testing (manual security review only)
+
+**Testing Philosophy:**
+- Focus testing effort on high-risk areas: algorithm accuracy, STT integration, data privacy
+- Manual testing for UX and edge cases
+- Automated tests for business logic that changes frequently
+
+**CI/CD:**
+- Automated unit/integration tests run on every commit (GitHub Actions or GitLab CI)
+- Staging environment for pre-production validation
+- Automated mobile builds (Fastlane or Codemagic)
+
+### Additional Technical Assumptions and Requests
+
+**Languages & Frameworks:**
+- **Mobile:** Flutter/Dart 3.x for iOS and Android (single codebase)
+- **Backend:** Python 3.11+ with FastAPI framework
+- **Web (Phase 2):** Flutter Web (preferred) or React/Next.js (fallback)
+
+**Database:**
+- **Primary:** PostgreSQL for relational data (user searches, feedback, analytics) AND Quran text storage
+- **Quran Text Storage Options:**
+  - Option A: PostgreSQL table with columns (surah_number, verse_number, arabic_text, transliteration)
+  - Option B: JSON/text files in `/shared` directory with in-memory loading for fast access
+  - Recommendation: PostgreSQL for easier querying and verse retrieval via API
+- **Caching:** Redis (optional, Phase 2) for frequently accessed verses
+
+**Quran Text Database Details:**
+- **Source:** Tanzil.net (http://tanzil.net/download/) or EveryAyah.com (https://everyayah.com/)
+- **Version:** Madinah Mushaf (Uthmani script, Hafs recitation)
+- **License:** Tanzil.net uses Creative Commons Attribution 3.0 (commercial use allowed with attribution)
+- **Download:** One-time during backend setup using their XML/JSON export
+- **Updates:** Rare (Quran text is static), check annually for corrections if any
+- **Dev Task:** Create setup script to download, parse, and populate local database
+
+**Hosting & Infrastructure:**
+- **Backend API:** DigitalOcean Droplet ($6/month) or Heroku Eco ($7/month) for MVP
+- **Database:** DigitalOcean Managed PostgreSQL ($15/month) or Supabase free tier
+- **Storage:** Quran text database size ~2-5MB (negligible storage cost)
+- **Web Frontend (Phase 2):** Vercel or Netlify free tier
+- **Mobile Apps:** App Store (iOS) and Google Play (Android) distribution
+- **Analytics:** Firebase Analytics (free) or custom backend tracking
+
+**Third-Party Services:**
+- **Speech-to-Text:** Azure Cognitive Services Speech-to-Text (5 hours/month free, then ~$1/hour)
+- **Payment Processing:** Stripe (2.9% + $0.30 per transaction) or alternative supporting international donations
+- **Quran Text Source:** Tanzil.net or EveryAyah.com (downloaded once, stored locally—NOT queried per search)
+
+**Development Tools:**
+- **Version Control:** Git with GitHub or GitLab
+- **IDE:** VSCode or Android Studio for Flutter development
+- **API Testing:** Postman or Thunder Client
+- **Backend Environment:** Virtual environment (venv) or Docker containers
+- **Mobile Testing:** iOS Simulator, Android Emulator, physical devices for final validation
+
+**Security & Compliance:**
+- HTTPS/TLS for all API communication (enforced)
+- Environment variables for API keys (never committed to Git)
+- GDPR/CCPA compliance: data export, deletion, opt-out mechanisms
+- App Store privacy nutrition labels completed before submission
+- Secure storage of anonymous UUIDs on device (iOS Keychain, Android Keystore)
+
+**Algorithm Specifications:**
+- **Fuzzy Matching:** Levenshtein distance, phonetic similarity (Soundex/Metaphone for Arabic), or token-based matching
+- **Optimization:** Matching completes in ≤2 seconds (NFR11) by comparing against local Quran database
+- **Confidence Calculation:** Based on similarity score, verse length match, distinctive word patterns
+- **Threshold Calibration:** Initially 90% (high), 65-89% (medium), <65% (low) - tunable post-launch
+
+**Data Privacy & Storage:**
+- Anonymous UUIDs generated on device (not server-assigned)
+- IP-based city/region geolocation (not GPS coordinates)
+- Data retention: 18 months minimum (NFR13)
+- No tracking of personal identity (names, emails, phone numbers)
+- Optional data collection with clear disclosure and opt-out
+
+**Performance Targets:**
+- API response time: <3 seconds for 95th percentile
+- Backend handles 2,000 searches/day with 50 concurrent requests (NFR10)
+- Mobile app startup: ≤2 seconds (NFR1)
+- Quran reader load: ≤1 second (NFR2)
+- Local Quran database query: <50ms for verse retrieval
+
+**Deployment & DevOps:**
+- Continuous deployment for backend (main branch → staging → production)
+- Mobile app releases via TestFlight (iOS) and Google Play Internal Testing before public launch
+- Rollback capability for backend deployments
+- Monitoring: Basic error logging and performance metrics (Sentry or custom)
+- Initial setup script: Download Quran text, populate database, validate data integrity
+
+**Budget Constraints:**
+- Marketing budget: $200 total for launch campaign
+- Infrastructure costs: <$20/month initially (DigitalOcean + Azure free tier)
+- Lean approach required for all technical decisions
+
+**Localization (Future):**
+- MVP: English UI with Arabic Quran text (Uthmani script)
+- Phase 2+: Add Urdu, Indonesian, Turkish, French translations for broader reach
+- RTL (Right-to-Left) layout support for Arabic text already built into Flutter
+
+**Open Source & Licensing:**
+- Quran text from Tanzil.net (Creative Commons Attribution 3.0 - requires attribution in app) or EveryAyah.com (license to be confirmed)
+- All other code proprietary unless decided otherwise post-MVP
+- Consider open-sourcing fuzzy matching algorithm if it proves valuable to community
+
+---
+
+## Epic List
+
+The following epics represent the high-level structure of the Lawh MVP development work. Each epic delivers significant, end-to-end, fully deployable increments of testable functionality following agile best practices.
+
+### Epic 1: Foundation & Core Infrastructure
+
+**Goal:** Establish complete project foundation including backend API (FastAPI), local Quran database setup, Flutter mobile app shell (iOS/Android), anonymous UUID generation system, deployment pipeline, and basic health-check endpoint to validate the entire development stack.
+
+**Key Deliverables:**
+- Backend API framework (Python FastAPI) with basic routing
+- Local Quran text database downloaded and populated (Tanzil.net or EveryAyah.com)
+- Flutter project initialized with iOS and Android targets
+- Anonymous UUID generation system (device-based)
+- Git repository, CI/CD pipeline setup
+- Deployment to staging environment (DigitalOcean/Heroku)
+- Health-check endpoint returning 200 OK
+
+**Why First:** Establishes foundational infrastructure that all subsequent epics depend on. Validates that the entire tech stack (backend, mobile, database, deployment) works together before building features.
+
+---
+
+### Epic 2: Core Verse Identification Engine with Validation
+
+**Goal:** Build and validate the heart of Lawh: Azure STT integration, optimized fuzzy matching algorithm with confidence scoring, audio recording/upload capabilities, and comprehensive accuracy testing with 50-100 real audio samples to validate 85%+ identification accuracy target.
+
+**Key Deliverables:**
+- Azure Speech-to-Text API integration with Arabic language support
+- Audio recording functionality (10-15 seconds, client-side validation)
+- Audio upload endpoint (`/search`) with proper encoding
+- Fuzzy matching algorithm (Levenshtein/phonetic) comparing STT output to local Quran database
+- Confidence scoring system (90%+ high, 65-89% medium, <65% low)
+- Search result API response with verse references and confidence scores
+- Accuracy validation: Test with 50-100 diverse audio samples (different reciters, audio quality)
+- Performance validation: ≤5 seconds from recording end to result display (FR10)
+
+**Why Second:** This is the highest-risk technical component and core value proposition. Building this early allows validation of the fundamental concept before investing heavily in UI/UX. If STT or matching fails to meet accuracy targets, we pivot before building the full product.
+
+---
+
+### Epic 3: User Interface & Quran Reader
+
+**Goal:** Deliver the complete user experience with mobile UI (Flutter iOS/Android), confidence-based results display, in-app Quran reader with verse highlighting, error handling flows, and culturally respectful design following spiritual minimalism principles.
+
+**Key Deliverables:**
+- Main screen with prominent "Listen" button and recording UI (progress indicator, waveform)
+- Results screen with confidence-based display (1 result for high confidence, 2-3 for medium, retry for low)
+- In-app Quran reader displaying Madinah Mushaf (Uthmani script) with verse highlighting
+- Error/retry screens with user-friendly messaging (FR13)
+- Settings screen with basic navigation
+- Dark green (dark lemon) and snow white branding with culturally appropriate design
+- Platform-specific UI patterns (iOS vs Android Material Design)
+- Basic accessibility: text sizing, color contrast 4.5:1
+
+**Why Third:** Cannot build functional UI without working backend (Epic 1) and API endpoints (Epic 2). This epic makes the core functionality accessible to real users and completes the primary user journey: hear → record → identify → read.
+
+---
+
+### Epic 4: Feedback Collection Infrastructure
+
+**Goal:** Implement multi-signal feedback system (explicit thumbs up/down, implicit clicks/time spent), optional IP-based location collection, data storage for continuous algorithm improvement, and privacy-first data handling (leveraging Epic 1's UUID system).
+
+**Key Deliverables:**
+- Explicit feedback UI: Thumbs up/down buttons, "none of these" option on results screen
+- Implicit feedback tracking: Which result clicked, time spent viewing, session duration
+- Feedback API endpoint (`/feedback`) for storing user responses
+- Optional location collection (IP-based city/region) with clear disclosure and settings toggle (FR8)
+- Database schema for storing searches, feedback, and optional location data
+- Privacy-first implementation: Links feedback to anonymous UUID (from Epic 1), no personal data
+- Data retention policy implementation: 18-month minimum storage (NFR13)
+
+**Why Fourth:** Feedback collection enables continuous algorithm improvement and measures actual accuracy (Goal #2 and #5). Depends on completed UI (Epic 3) for user interactions and Epic 1's UUID system for anonymous tracking. This is essential for MVP but not blocking for core functionality testing.
+
+---
+
+### Epic 5: Monetization & Launch Preparation
+
+**Goal:** Add Sadaqah donation integration (Stripe), complete app store submission requirements (privacy labels, screenshots, testing), final polish, and production deployment with basic error logging.
+
+**Key Deliverables:**
+- Prominent "Support Lawh (Sadaqah)" button on main screen and in settings
+- Stripe payment integration for international donations
+- Donation confirmation flow and thank-you messaging
+- App store assets: Screenshots, app descriptions, keywords, promotional text
+- Privacy nutrition labels (iOS App Store, Google Play)
+- App icon, splash screen, and branding finalization
+- Final testing: Cross-device (iOS/Android), edge cases, error scenarios
+- Production deployment: Backend to production server, mobile apps to TestFlight/Internal Testing
+- Basic error logging (Sentry or custom) for production monitoring
+- App Store and Google Play submission
+
+**Why Fifth:** Donation functionality validates cost sustainability (Goal #4). App store assets and privacy labels are required for public launch. Depends on completed UI and features from Epics 1-4. This epic transforms the working prototype into a production-ready, publicly available product.
+
+---
+
+### Epic 6: Analytics & Monitoring Backend
+
+**Goal:** Build backend analytics infrastructure including admin dashboard for monitoring key metrics (search volume, STT costs, donation revenue, accuracy trends, user retention), cost-per-search calculations, and data export capabilities for continuous improvement insights.
+
+**MVP Scope Clarification:**
+- **IN MVP (Required):** Stories 6.1-6.2 (Data aggregation + API endpoints) - Provides operational visibility from Day 1
+- **FLEXIBLE (Can defer to Week 5 if timeline pressure):** Stories 6.3-6.4 (Admin web UI + Alerts) - Manual API queries acceptable for MVP
+- **RECOMMENDED IN MVP:** Stories 6.5-6.7 (Data export, retention calculation, documentation) - Enables Goal #4 validation
+
+**Launch Blocker:** NO - Epic 6 can be deferred entirely if necessary, but Stories 6.1-6.2 are strongly recommended for cost monitoring.
+
+**Key Deliverables:**
+- Analytics data aggregation logic (daily/weekly metrics from search logs)
+- Admin API endpoints for metrics:
+  - `/admin/metrics/overview` - High-level KPIs dashboard
+  - `/admin/metrics/searches` - Search volume trends
+  - `/admin/metrics/costs` - Azure STT costs and cost-per-search
+  - `/admin/metrics/revenue` - Donation tracking and conversion rates
+  - `/admin/metrics/accuracy` - Identification accuracy trends from feedback
+  - `/admin/metrics/retention` - User retention analysis
+  - `/admin/data/export` - CSV export for detailed analysis
+- Simple admin web interface with authentication (basic auth or API key)
+- Automated daily metric calculation (scheduled task/cron job)
+- Cost monitoring: Azure STT usage tracking and cost-per-search calculations
+- Revenue tracking: Stripe webhook integration for donation events
+
+**Key Metrics Tracked:**
+- Search volume: Total searches, daily/weekly active users, searches per user
+- Cost metrics: Azure STT cost per search, total monthly costs, cost trends
+- Revenue metrics: Total donations, conversion rate, average donation amount
+- Accuracy metrics: Positive feedback percentage, confidence score distribution
+- Retention metrics: Day 1/7/30 retention rates, repeat search behavior
+
+**Why Sixth:** Provides operational visibility and validates cost sustainability (Goal #4). Enables data-driven decisions for Phase 2 prioritization. Can be deployed post-launch if timeline pressure occurs (launch blocker: NO), but provides immediate value for monitoring MVP success and making informed product decisions.
+
+**Note:** Marketing execution (Goal #3: acquire 1,000 users with $200 budget) is a separate post-launch workstream, not part of development epics. Epic 5 includes app store assets for discoverability, and Epic 6 provides metrics to measure acquisition success.
+
+**Epic Details:** See individual epic files in `docs/prd/` directory:
+- `epic-1-foundation.md` - 8 stories
+- `epic-2-core-engine.md` - 8 stories
+- `epic-3-ui-reader.md` - 8 stories
+- `epic-4-feedback.md` - 7 stories
+- `epic-5-monetization-launch.md` - 8 stories
+- `epic-6-analytics-monitoring.md` - 7 stories
+
+---
+
+## Checklist Results Report
+
+**Report Generated:** 2026-01-20 (Updated after HIGH priority items addressed)
+**Overall PRD Completeness:** 96%
+**MVP Scope Appropriateness:** Just Right
+**Readiness for Architecture Phase:** **READY FOR ARCHITECT**
+
+### Executive Summary
+
+This PRD demonstrates exceptional product management rigor with clear, measurable business goals, well-scoped MVP with explicit in/out of scope decisions, thoughtful epic breakdown with dependencies and acceptance criteria, strong technical guidance with documented rationale, and privacy-first culturally sensitive design approach.
+
+**Most Critical Concerns:**
+1. Missing competitive analysis and user research validation (assumed market need)
+2. Scalability planning beyond 2,000 searches/day not addressed
+3. Algorithm validation dependency creates high technical risk (Story 2.7 is GO/NO-GO decision point)
+4. Limited disaster recovery and backup strategy documentation
+
+**Overall Assessment:** The PRD is ready for architectural design work. Identified gaps are quality improvements that should be addressed but do not block architecture phase.
+
+### Category Status Summary
+
+| Category | Status | Completeness | Critical Issues |
+|----------|--------|--------------|-----------------|
+| 1. Problem Definition & Context | **PASS** | 95% | Missing formal user research documentation |
+| 2. MVP Scope Definition | **PASS** | 98% | Excellent scope boundaries and rationale |
+| 3. User Experience Requirements | **PASS** | 90% | Strong UX vision; accessibility partially deferred |
+| 4. Functional Requirements | **PASS** | 95% | Clear, testable FRs |
+| 5. Non-Functional Requirements | **PARTIAL** | 85% | Gaps in disaster recovery and scalability beyond MVP |
+| 6. Epic & Story Structure | **PASS** | 98% | Outstanding epic breakdown with clear dependencies |
+| 7. Technical Guidance | **PASS** | 92% | Strong architecture direction and rationale |
+| 8. Cross-Functional Requirements | **PASS** | 88% | Data and integration requirements clear |
+| 9. Clarity & Communication | **PASS** | 95% | Excellent documentation quality |
+
+**Overall Status: 8 PASS, 1 PARTIAL = READY FOR ARCHITECT**
+
+### Top Priority Recommendations
+
+**HIGH PRIORITY (Address within 1 week):**
+
+1. **✅ COMPLETED - Add Backup & Recovery NFR:**
+   - NFR16: Daily automated database backups retained for 30 days (ADDED)
+   - NFR17: Recovery Time Objective (RTO) = 4 hours, Recovery Point Objective (RPO) = 24 hours (ADDED)
+   - Implementation added to Epic 5 Story 5.5
+
+2. **✅ COMPLETED - Document User Research:**
+   - No formal user research exists (no surveys, interviews, focus groups) - ACKNOWLEDGED
+   - Problem statement explicitly labeled as "hypothesis to validate via MVP" (ADDED to Background Context)
+   - Validation criteria documented (≥75% positive feedback, ≥40% retention, 1,000+ users)
+   - Risk acknowledgment included with mitigation strategy (MVP approach, $200 budget)
+
+3. **✅ COMPLETED - Clarify Epic 6 MVP Scope:**
+   - Stories 6.1-6.2 (Data aggregation + API endpoints) are IN MVP - REQUIRED for cost monitoring (DOCUMENTED)
+   - Stories 6.3-6.4 (Admin UI + Alerts) can defer to Week 5 if timeline pressure (DOCUMENTED)
+   - Stories 6.5-6.7 recommended in MVP but flexible (DOCUMENTED)
+   - Launch blocker status: NO (CLARIFIED)
+
+**ARCHITECT ACTIONS:**
+
+1. **Week 1 Technical Spike (Critical):**
+   - Validate Azure STT accuracy with 10 sample Quran audio clips
+   - If accuracy <50%, pivot to alternative STT provider
+   - Document findings before committing to Epic 2 implementation
+
+2. **Algorithm Design Deep-Dive:**
+   - Design concrete fuzzy matching implementation (N-gram, Jaro-Winkler, TF-IDF)
+   - Prototype with 100 verses to validate ≤2s performance target
+
+3. **Database Schema Design:**
+   - Create complete schema DDL with indexes, foreign keys, constraints
+   - Validate schema supports Epic 4 analytics queries efficiently
+
+### Conditions for Proceeding
+
+1. PM addresses HIGH priority items within 1 week of architecture start
+2. Architect conducts Week 1 technical spike validating Azure STT with Quranic audio
+3. Story 2.7 GO/NO-GO decision point acknowledged by all stakeholders
+4. Epic 6 scope clarified (Stories 6.1-6.2 in MVP minimum)
+
+**Full Checklist Report:** See detailed validation in architecture handoff documentation.
+
+---
+
+## Next Steps
+
+### UX Expert Prompt
+
+Review the Lawh PRD (`docs/prd.md`) and UI Design Goals section. Create detailed UX specifications including:
+
+1. **Wireframes/Mockups** for core screens (main, recording, results, reader, settings)
+2. **User Flow Diagrams** for primary journeys (hear → record → identify → read)
+3. **Design System** specifications (dark green/snow white color palette, Uthmani script typography, component library)
+4. **Interaction Patterns** for confidence-based results display, recording UI, feedback collection
+5. **Accessibility Guidelines** for MVP (text sizing, contrast 4.5:1, touch targets 44x44pt)
+6. **Cultural Design Review** ensuring respectful imagery, RTL support, and Islamic design principles
+
+Focus on spiritual minimalism, cultural sensitivity, and mobile-first responsive design for iOS/Android platforms.
+
+**Deliverables:** UX specification document with wireframes, style guide, and component specifications ready for developer implementation in Epic 3.
+
+### Architect Prompt
+
+Review the Lawh PRD (`docs/prd.md`), all epic files in `docs/prd/`, and Technical Assumptions section. Create comprehensive technical architecture including:
+
+1. **System Architecture** design (backend API, Flutter mobile apps, database, Azure STT integration, local Quran database)
+2. **Fuzzy Matching Algorithm** specification with concrete implementation approach (Levenshtein, phonetic matching, confidence scoring formula)
+3. **Database Schema** DDL with complete table definitions, indexes, foreign keys, and migration strategy
+4. **API Specification** for all endpoints (`/search`, `/quran`, `/feedback`, `/admin/*`) with request/response formats
+5. **Performance Optimization** strategy for ≤2s matching (NFR11) and <50ms Quran queries
+6. **Security Architecture** for GDPR/CCPA compliance, data encryption, environment variable management
+7. **Deployment Architecture** for staging/production environments with CI/CD pipeline
+8. **Technical Risk Mitigation** plan for Azure STT validation, algorithm performance, concurrent load testing
+
+**Critical First Task:** Conduct Week 1 technical spike validating Azure Speech-to-Text accuracy with Quranic Arabic recitation samples. Document findings and recommend proceed/pivot decision before Epic 2 implementation.
+
+**Deliverables:** Architecture document with diagrams, API specs, database schema, algorithm design, and deployment plan ready for Epic 1 implementation kickoff.
+
+---
+
+**PRD Version:** 1.0
+**Status:** Ready for Architecture Phase
+**Next Review:** After architecture design completion
+
+
+

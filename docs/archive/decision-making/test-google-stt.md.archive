@@ -1,0 +1,107 @@
+# Google Cloud Speech-to-Text Testing Guide
+
+**Purpose:** Test if Google STT performs better than Azure for Quranic Arabic transcription
+
+**Why:** Azure STT returns English garbage on user recordings. Google might have better Arabic recognition.
+
+---
+
+## Quick Setup
+
+### 1. Create Google Cloud Account
+
+1. Go to https://console.cloud.google.com
+2. Sign up (get $300 free credit)
+3. Create new project: "lawh-test"
+
+### 2. Enable Speech-to-Text API
+
+1. In Google Cloud Console, go to "APIs & Services"
+2. Click "Enable APIs and Services"
+3. Search for "Cloud Speech-to-Text API"
+4. Click "Enable"
+
+### 3. Create Service Account Key
+
+1. Go to "APIs & Services" → "Credentials"
+2. Click "Create Credentials" → "Service Account"
+3. Name: "lawh-stt-test"
+4. Click "Create and Continue"
+5. Skip roles (optional for testing)
+6. Click "Done"
+7. Click on the service account you just created
+8. Go to "Keys" tab
+9. Click "Add Key" → "Create New Key"
+10. Choose "JSON"
+11. Save the JSON file to `lawh-credentials.json` (DO NOT commit to git)
+
+### 4. Install Google Cloud SDK
+
+```bash
+# macOS
+brew install --cask google-cloud-sdk
+
+# Initialize
+gcloud init
+gcloud auth application-default login
+```
+
+### 5. Test with Command Line
+
+```bash
+# Quick test with bello-1.wav
+gcloud ml speech recognize test_audio/samples/bello-1.wav \
+  --language-code=ar-SA \
+  --model=latest_long
+
+# Output will show the transcription
+```
+
+---
+
+## Compare Results
+
+Run both Azure and Google on the same file:
+
+**Azure Result:**
+```
+"Who do we do الرحمان أيام تدور"
+```
+
+**Google Result:**
+```
+[Run the command above to see]
+```
+
+If Google returns **pure Arabic with no English garbage**, it's our winner.
+
+---
+
+## Next Steps
+
+**If Google performs better (>70% accuracy):**
+- ✅ Switch to Google Cloud STT for MVP
+- Implement Google STT integration in Flutter
+- Cost: ~$0.006/15 seconds = $0.40/hour
+
+**If Google also returns garbage (<70%):**
+- ❌ STT approach is not viable for MVP
+- Consider alternative approaches:
+  1. Manual verse selection (dropdown/search)
+  2. Audio fingerprinting (Shazam-like)
+  3. Hybrid: STT + manual fallback
+
+---
+
+## Cost Comparison
+
+| Provider | Free Tier | Cost After Free |
+|----------|-----------|----------------|
+| Azure STT | 5 hours/month | $1.00/hour |
+| Google STT | 60 minutes/month | $0.006/15s (~$1.44/hour) |
+| Whisper API (OpenAI) | None | $0.006/minute (~$0.36/hour) |
+
+---
+
+**Status:** Alternative testing needed
+**Priority:** HIGH (Azure not working for user recordings)
