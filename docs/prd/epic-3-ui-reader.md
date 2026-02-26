@@ -14,10 +14,17 @@
 
 1. Main screen displays:
    - Large, centered "Listen" button (primary CTA, dark green color)
-   - Prominent "Support Lawh (Sadaqah)" button below Listen button (secondary CTA)
+   - "Upgrade to Premium" button below Listen button (secondary CTA, visible to free tier users only)
+   - Search usage counter: "X/3 searches today" or "X/10 this month" (free tier only)
    - Settings icon in top-right corner
    - App branding: "Lawh" name/logo at top
-2. "Listen" button tap initiates audio recording (calls Story 2.2 functionality)
+   - Banner ad at bottom of screen (free tier only, not during first app session)
+   - Navigation to Explore (Recent Tab) page
+2. "Listen" button tap flow:
+   - Free tier (after first search): Show interstitial ad, then initiate recording
+   - Free tier (first search ever): Skip ad, initiate recording directly
+   - Paid tier: Skip ad, initiate recording directly
+   - Calls Story 2.2 functionality for audio recording
 3. Recording UI overlay displays:
    - Circular progress indicator showing elapsed time (0-15 seconds)
    - Animated waveform visualization of audio input
@@ -89,6 +96,30 @@
 
 ---
 
+## Story 3.3b: Explore Page (Recent Tab)
+
+**As a** user,
+**I want** to see my recently identified verses in one place,
+**so that** I can quickly return to verses I've discovered without re-recording.
+
+### Acceptance Criteria
+
+1. Explore page accessible via bottom navigation or tab from main screen
+2. Displays list of last 20 identified verses:
+   - Surah name and verse number (e.g., "Al-Fatiha 1:1")
+   - First few words of Arabic text (preview)
+   - Timestamp: "Today", "Yesterday", or date
+   - Confidence indicator (high/medium)
+3. Tap any verse → opens Quran Reader at that verse (Story 3.3)
+4. Empty state for new users: "Your recently identified verses will appear here"
+5. Banner ad at bottom of Explore page (free tier only, not during first session)
+6. "Clear History" option in overflow menu or Settings
+7. Recent verses stored locally on device (synced with backend for analytics)
+8. Available to ALL users (free and paid) - this is not a premium-gated feature
+9. Design: Clean list layout following app branding, smooth scrolling
+
+---
+
 ## Story 3.4: Settings Screen with Privacy Controls
 
 **As a** user,
@@ -107,9 +138,11 @@
      - Link: "Privacy Policy" (opens web view or external browser)
      - Button: "Request Data Deletion" (triggers deletion flow per NFR7)
      - Text: "Your data is anonymous and linked only to this device"
-   - **Support Lawh**
-     - Button: "Support Lawh (Sadaqah)" (opens donation flow, Story 5.1)
-     - Text: "Help keep Lawh free and accessible"
+   - **Subscription**
+     - Button: "Manage Subscription" (opens subscription management, Story 5.1)
+     - Current status: "Free (with ads)" or "Premium (expires {date})"
+     - Button: "Restore Purchases" (for reinstalls/device transfers)
+     - Text: "Unlimited searches and ad-free experience"
    - **About**
      - App version number
      - Attribution: "Quran text from Tanzil.net (CC BY 3.0)"
@@ -230,7 +263,7 @@
 
 ## Epic 3 Summary
 
-**Stories:** 8 stories covering main screen, results display, Quran reader, settings, error handling, onboarding, iOS build, and Android build
+**Stories:** 9 stories covering main screen (with ads), results display, Quran reader, Explore page (Recent Tab), settings, error handling, onboarding, iOS build, and Android build
 
 **Estimated Effort:** 4-5 days for solo developer
 

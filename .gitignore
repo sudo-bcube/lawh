@@ -4,3 +4,10 @@
 # Legacy directories
 /lawh-frontend
 /lawh-backend
+
+# BMAD directories
+/_bmad
+/_bmad-output
+
+# Claude
+/.claude

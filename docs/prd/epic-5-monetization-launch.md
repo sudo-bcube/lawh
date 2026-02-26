@@ -1,41 +1,105 @@
 # Epic 5: Monetization & Launch Preparation
 
-**Expanded Goal:** Add Sadaqah donation integration (Stripe), complete app store submission requirements (privacy labels, screenshots, testing), final polish, and production deployment with basic error logging. This epic transforms the working prototype into a production-ready, publicly available product and validates cost sustainability (Goal #4).
+**Expanded Goal:** Add freemium subscription integration (RevenueCat with Apple IAP and Google Play Billing), advertisement integration (Google AdMob for free tier users), complete app store submission requirements (privacy labels, screenshots, testing), final polish, and production deployment with basic error logging. This epic transforms the working prototype into a production-ready, publicly available product and validates cost sustainability (Goal #4).
 
 ---
 
-## Story 5.1: Sadaqah Donation Integration (Stripe)
+## Story 5.1: Freemium Subscription Integration (RevenueCat)
 
 **As a** user,
-**I want** to support Lawh's development through voluntary donations,
-**so that** the app can remain free and accessible to all Muslims.
+**I want** to upgrade to a paid subscription for unlimited searches and an ad-free experience,
+**so that** I can use Lawh without daily/monthly limits or advertisement interruptions.
 
 ### Acceptance Criteria
 
-1. **Donation button placement (per UI goals):**
-   - Prominent "Support Lawh (Sadaqah)" button on main screen below "Listen" button
-   - Same button accessible in Settings screen
-2. **Donation flow:**
-   - Tap button opens donation screen
-   - Pre-set donation amounts: $5, $10, $25, $50, Custom amount
-   - Currency selector: USD, EUR, GBP, SAR (Saudi Riyal), others as needed
-   - Text: "Your donation helps keep Lawh free for everyone. Jazakallah Khair (May Allah reward you)."
-3. **Stripe integration:**
-   - Stripe Payment Sheet (mobile SDK) for secure payment processing
-   - Supports credit/debit cards, Apple Pay (iOS), Google Pay (Android)
-   - International donations supported (FR9 requirement)
-   - Test mode for development, production mode for launch
-4. **Payment processing:**
-   - Backend endpoint: `POST /api/donate` handles Stripe payment intent creation
-   - Stripe webhook: `/api/webhooks/stripe` receives payment confirmation
-   - Donation recorded in database: user_uuid (optional, anonymous), amount, currency, status, timestamp
-5. **Confirmation flow:**
-   - Success: "Thank you for your support! Jazakallah Khair" with animated checkmark
-   - Failure: "Payment failed - please try again or contact support"
-   - Email receipt (optional, if user provides email)
-6. **Privacy:** Donation is anonymous (linked to UUID only if user is active, no personal data required)
-7. **Stripe fees:** Document fee structure (2.9% + $0.30) for cost analysis (Epic 6)
-8. Test: Process test donation in Stripe test mode, verify backend receives webhook, donation recorded
+1. **Subscription tiers:**
+   - Monthly: $1/month (auto-renewing)
+   - Yearly: $10/year (auto-renewing, 2 months free - best value)
+2. **Free tier limits (enforced in-app):**
+   - Maximum 3 searches per day
+   - Maximum 10 searches per month
+   - Shows advertisements (banner + interstitial per Story 5.1b)
+   - Clear usage counter displayed: "3/3 searches used today" or "10/10 this month"
+3. **Paid tier benefits:**
+   - Unlimited searches (no daily/monthly limits)
+   - Ad-free experience (no banner or interstitial ads)
+   - Recent Tab available (same as free tier)
+4. **Paywall presentation:**
+   - When free limit reached: Full-screen paywall with subscription options
+   - "Upgrade" button accessible from Settings screen at any time
+   - Paywall shows: Features unlocked (unlimited searches, no ads), pricing, restore purchases option
+   - Text: "Unlock unlimited verse identification and remove all ads"
+5. **RevenueCat integration:**
+   - RevenueCat SDK for both iOS (Apple IAP) and Android (Google Play Billing)
+   - Single codebase manages both platforms' subscriptions
+   - Entitlements: "premium" entitlement unlocks paid features (unlimited searches, ad-free)
+   - Offerings: "default" offering with monthly and yearly products
+   - Test mode (sandbox) for development, production for launch
+6. **Subscription status handling:**
+   - On app launch: Check subscription status via RevenueCat
+   - Cache status locally for offline access
+   - Handle states: active, expired, cancelled, grace period
+   - Sync subscription status with backend for analytics
+7. **Restore purchases:**
+   - "Restore Purchases" button in Settings and paywall
+   - Handles family sharing and device transfers
+8. **Backend integration:**
+   - RevenueCat webhook: `/api/webhooks/revenuecat` receives subscription events
+   - Store subscription status: user_uuid, product_id, status, expires_at, platform
+   - No payment processing on backend (RevenueCat/stores handle this)
+9. **Platform fees:** Apple/Google take 15% (Small Business Program) or 30% of revenue
+10. Test: Complete subscription flow in sandbox mode (iOS TestFlight, Android internal testing), verify entitlements granted, ads removed, limits removed
+
+---
+
+## Story 5.1b: Advertisement Integration (Google AdMob)
+
+**As a** product owner,
+**I want** advertisements displayed to free tier users,
+**so that** Lawh generates revenue from users who don't subscribe.
+
+### Acceptance Criteria
+
+1. **Google AdMob integration:**
+   - AdMob SDK integrated for iOS and Android
+   - Ad unit IDs configured: banner ad unit, interstitial ad unit
+   - Test ads enabled during development, production ads for launch
+   - GDPR/CCPA consent handling via AdMob's User Messaging Platform (UMP)
+2. **Banner ad placement:**
+   - Banner ad displayed at bottom of Home screen
+   - Banner ad displayed at bottom of Explore (Recent Tab) page
+   - Banner size: Adaptive banner (adjusts to screen width)
+   - Banner does NOT appear during user's very first app session
+3. **Interstitial ad placement:**
+   - Interstitial ad shown BEFORE initiating a search (after tapping "Listen")
+   - First search ever is ad-free (good first impression)
+   - Subsequent searches show interstitial before recording starts
+   - Interstitial is skippable after 5 seconds
+   - Loading indicator shown while ad loads to prevent jarring transition
+4. **Ad-free for paid users:**
+   - Check subscription status before showing any ad
+   - If "premium" entitlement active: skip all ads
+   - Seamless experience with no ad placeholders visible
+5. **First-time user experience:**
+   - No banner ads during first app session (until app is closed and reopened)
+   - No interstitial ad before first-ever search
+   - Track "first_session" and "first_search_completed" flags locally
+6. **Ad frequency management:**
+   - Interstitial ads: Maximum 1 per search attempt (not per minute)
+   - Banner ads: Always visible on designated screens (not rotating)
+   - No video reward ads (keeps experience simple)
+7. **Error handling:**
+   - If ad fails to load: Proceed without ad (don't block user)
+   - Log ad failures for monitoring (Epic 6)
+   - Graceful degradation if AdMob unavailable
+8. **Privacy compliance:**
+   - Update privacy policy to disclose ad personalization
+   - Update App Store privacy labels to include advertising data
+   - Implement AdMob consent flow for EU users (GDPR)
+9. **Revenue tracking:**
+   - AdMob dashboard for ad revenue monitoring
+   - Backend logging of ad impressions for correlation with user behavior (optional)
+10. Test: Verify banner ads appear on Home/Explore, interstitial shows before search (except first), paid users see no ads
 
 ---
 
@@ -89,12 +153,12 @@
    - Data linked to user: Anonymous UUID only
    - Data not collected: Name, email, phone, precise location, browsing history
    - Data used for: App functionality, analytics, product personalization
-   - Third-party data: Azure STT (audio transcription only, not stored), Stripe (payment processing)
+   - Third-party data: Azure STT (audio transcription only, not stored), RevenueCat (subscription management), Apple/Google (payment processing via IAP)
 2. **Google Play Data Safety Form:**
    - Similar disclosures as iOS
    - Encryption: In transit (HTTPS), at rest (database encryption)
    - Data deletion: Users can request deletion via Settings
-   - Data sharing: No data sold or shared with third parties except service providers (Azure, Stripe)
+   - Data sharing: No data sold or shared with third parties except service providers (Azure, RevenueCat, Apple/Google for payments)
 3. **Privacy Policy (required for both platforms):**
    - Hosted at public URL (e.g., lawh.app/privacy)
    - Written in plain language (not legalese)
@@ -123,7 +187,7 @@
 2. **Functional testing:**
    - Complete user journey: Record → Identify → Read (happy path)
    - All edge cases: Low confidence results, no match, errors (network, API, permissions)
-   - Settings: Location toggle, data deletion, donation flow
+   - Settings: Location toggle, data deletion, subscription management
    - Feedback: Thumbs up/down, implicit tracking
 3. **Performance testing:**
    - App launch time: ≤2 seconds (NFR1)
@@ -166,7 +230,7 @@
    - SSL/TLS certificate (Let's Encrypt or provider-managed)
    - PostgreSQL database on production tier (managed service recommended)
 2. **Environment configuration:**
-   - Production environment variables: Azure STT prod keys, Stripe live keys, database prod credentials
+   - Production environment variables: Azure STT prod keys, RevenueCat API keys, database prod credentials
    - Secrets management: Keys stored securely (not in code), rotated if compromised
    - CORS configured for production mobile app domains
 3. **Production data:**
@@ -215,7 +279,7 @@
    - App name: "Lawh - Quran Verse Finder" (or similar, check availability)
    - Bundle ID registered: com.lawh.app (or chosen identifier)
    - Screenshots, descriptions, keywords uploaded
-   - Pricing: Free with in-app donations (not in-app purchase, just external link to Stripe)
+   - Pricing: Freemium with In-App Subscriptions ($1/month, $10/year via Apple IAP)
    - App Store availability: All countries (or specific regions if restricted)
 3. **Submission:**
    - Upload IPA (via Xcode or Transporter app)
@@ -223,7 +287,7 @@
    - Export compliance: Declare if app uses encryption (HTTPS counts)
 4. **Review process:**
    - Monitor review status (typically 1-3 days)
-   - Respond to any rejection reasons (common: privacy issues, metadata mismatch, donation flow concerns)
+   - Respond to any rejection reasons (common: privacy issues, metadata mismatch, IAP integration concerns)
    - If rejected: Fix issues, resubmit
 5. **Approval & release:**
    - Upon approval: Release immediately or schedule release date (target: February 14, 2026)
@@ -252,7 +316,7 @@
    - App name: "Lawh - Quran Verse Finder" (check availability)
    - Package name registered: com.lawh.app (matches iOS bundle ID ideally)
    - Screenshots, feature graphic, descriptions uploaded
-   - Pricing: Free with donations
+   - Pricing: Freemium with In-App Subscriptions ($1/month, $10/year via Google Play Billing)
    - Content rating questionnaire completed (likely "Everyone")
    - Countries available: All (or specific regions)
 3. **Submission:**
@@ -292,7 +356,7 @@
    - Marketing budget ($200) allocated for ads (Facebook, Instagram targeting Muslims interested in Islam/Quran)
 3. **Day 1 monitoring:**
    - Watch for crashes, errors, user complaints
-   - Monitor backend health: API response times, Azure STT costs, database load
+   - Monitor backend health: API response times, Azure STT costs, subscription conversions, database load
    - Track downloads: iOS App Store Connect, Google Play Console
    - Engage with early users: Respond to reviews, thank early adopters
 4. **Immediate response plan:**
@@ -303,7 +367,7 @@
    - Downloads: Target 100+ downloads in first week
    - Searches: Monitor search volume, identify patterns
    - Feedback: Track positive vs negative feedback rate (target ≥75% per Goal #2)
-   - Costs: Azure STT costs vs donations received
+   - Costs: Azure STT costs vs subscription revenue
 6. **Week 1 retrospective:**
    - Document what went well, what failed
    - Prioritize Phase 2 features based on user feedback
@@ -313,7 +377,7 @@
 
 ## Epic 5 Summary
 
-**Stories:** 8 stories covering donation integration, app store assets, privacy labels, testing, production deployment, iOS submission, Android submission, and launch coordination
+**Stories:** 9 stories covering freemium subscription integration, advertisement integration (AdMob), app store assets, privacy labels, testing, production deployment, iOS submission, Android submission, and launch coordination
 
 **Estimated Effort:** 2-3 days for solo developer (can overlap with Epic 4)
 
@@ -325,7 +389,8 @@
 **Definition of Done:**
 - All 8 stories completed with acceptance criteria met
 - Lawh live on iOS App Store and Google Play
-- Donation flow working and tested
+- Freemium subscription flow working and tested (RevenueCat)
+- Advertisement integration working (AdMob banner + interstitial)
 - Privacy labels accurate and approved
 - Production backend stable with monitoring
 - Launch announcement published, marketing initiated

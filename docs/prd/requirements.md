@@ -4,7 +4,7 @@
 
 1. **FR1:** The system shall record audio for a minimum of 5 seconds and maximum of 15 seconds, then transcribe the recorded Arabic Quranic recitation using Azure Speech-to-Text API with Arabic language support and built-in noise suppression enabled. Recordings under 5 seconds shall prompt user to continue recording; recordings shall automatically stop at 15 seconds.
 
-2. **FR2:** The system shall implement an optimized text matching algorithm (Levenshtein distance, phonetic matching, or equivalent) that compares STT transcription output against a Quran text database (Madinah Mushaf from Tanzil.net or equivalent) to identify matching verses with confidence scoring in the fastest time possible.
+2. **FR2:** The system shall implement an optimized text matching algorithm (Levenshtein distance, phonetic matching, or equivalent) that compares STT transcription output against a Quran text database (Madinah Mushaf from Tanzil.net or equivalent) to identify matching verses with confidence scoring in ≤2 seconds after receiving STT output.
 
 3. **FR3:** The system shall display search results using confidence-based logic: 1 result if algorithm confidence ≥80%, 2-3 results if confidence is 55-79%, and a "Could not identify verse - please try again" message if confidence <55%. (Note: Confidence score represents algorithm certainty; actual accuracy target of 85%+ correct verse in top 3 is measured in NFR3.)
 
@@ -18,19 +18,29 @@
 
 8. **FR8:** The system shall request optional city/region location data via IP-based geolocation with clear disclosure of purpose ("Help us understand regional recitation preferences") and provide opt-in/opt-out toggle in settings.
 
-9. **FR9:** The system shall display a "Support Lawh (Sadaqah)" donation button accessible from the main screen and settings, integrated with a payment processor (Stripe or equivalent) that supports international donations.
+9. **FR9:** The system shall implement a freemium subscription model using RevenueCat SDK (wrapping Apple In-App Purchase for iOS and Google Play Billing for Android) with two paid tiers: $1/month or $10/year, unlocking unlimited searches and removing all advertisements.
 
-10. **FR10:** The system shall complete the cycle from recording completion to result display in ≤5 seconds for 90% of searches (excluding the 5-15 second recording duration).
+10. **FR10:** The system shall enforce free tier usage limits: maximum 3 searches per day and 10 searches per month. When limits are reached, the system shall display a clear message prompting upgrade to paid subscription with a direct link to the subscription screen.
 
-11. **FR11:** The system shall support cross-platform deployment on iOS (13+), Android (8.0+), and modern web browsers (Chrome, Safari, Firefox, Edge).
+11. **FR11:** The system shall provide a "Recent Tab" (Explore page) feature displaying the user's recently identified verses (last 20 searches) for quick return access. This feature shall be available to all users (free and paid).
 
-12. **FR12:** The system shall store all user searches, feedback, and optional location data in a backend database for algorithm improvement and analytics.
+12. **FR12:** The system shall track subscription status locally (via RevenueCat SDK) and sync with backend to gate features appropriately. Subscription status shall be checked on app launch and periodically during use to handle expiration, renewal, or cancellation.
 
-13. **FR13:** The system shall display user-friendly error messages for common failure scenarios including: STT API unavailable, poor audio quality detected, network connectivity lost, no verse match found (confidence <55%), and provide actionable recovery steps.
+13. **FR13:** The system shall display banner advertisements (Google AdMob) for free tier users on the Home screen and Explore (Recent Tab) page. Banner ads shall not appear during the user's very first app session (first-time user experience). Paid subscribers shall see no advertisements.
 
-14. **FR14:** The system shall perform client-side audio validation before API submission, checking minimum audio volume level and duration requirements (5-15 seconds), rejecting recordings that fail quality thresholds with user guidance.
+14. **FR14:** The system shall display interstitial advertisements (Google AdMob) for free tier users before initiating a search, with the following exceptions: (a) the user's very first search ever is ad-free, (b) paid subscribers see no ads. Interstitial ads shall be skippable after 5 seconds or close automatically after completion.
 
-15. **FR15:** The system shall require active internet connectivity to function and display clear messaging when offline: "Internet connection required for Lawh to identify verses."
+15. **FR15:** The system shall complete the cycle from recording completion to result display in ≤5 seconds for 90% of searches (excluding the 5-15 second recording duration and any interstitial ad viewing time).
+
+16. **FR16:** The system shall support cross-platform deployment on iOS (13+), Android (8.0+), and modern web browsers (Chrome, Safari, Firefox, Edge).
+
+17. **FR17:** The system shall store all user searches, feedback, and optional location data in a backend database for algorithm improvement and analytics.
+
+18. **FR18:** The system shall display user-friendly error messages for common failure scenarios including: STT API unavailable, poor audio quality detected, network connectivity lost, no verse match found (confidence <55%), and provide actionable recovery steps.
+
+19. **FR19:** The system shall perform client-side audio validation before API submission, checking minimum audio volume level and duration requirements (5-15 seconds), rejecting recordings that fail quality thresholds with user guidance.
+
+20. **FR20:** The system shall require active internet connectivity to function and display clear messaging when offline: "Internet connection required for Lawh to identify verses."
 
 ## Non-Functional Requirements
 
@@ -64,7 +74,7 @@
 
 15. **NFR15:** Azure Speech-to-Text noise suppression feature shall be enabled by default to improve recognition quality in real-world environments (mosques, lectures, outdoor spaces).
 
-16. **NFR16:** The PostgreSQL database shall have automated daily backups configured with a retention period of 30 days. Backups shall include all user data (users, searches, feedback, analytics) and Quran text database. Backup verification test shall be performed quarterly to ensure recoverability.
+16. **NFR16:** The relational database shall have automated daily backups configured with a retention period of 30 days. Backups shall include all user data (users, searches, feedback, analytics) and Quran text database. Backup verification test shall be performed quarterly to ensure recoverability.
 
 17. **NFR17:** The system shall have defined disaster recovery objectives: Recovery Time Objective (RTO) of 4 hours maximum downtime, and Recovery Point Objective (RPO) of 24 hours maximum data loss. Database restoration procedure shall be documented and tested before production launch.
 

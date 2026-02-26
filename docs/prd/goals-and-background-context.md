@@ -5,7 +5,7 @@
 - Launch Lawh MVP by February 14, 2026 that enables Muslims to identify Quranic verses from live recitations within seconds
 - Achieve 85%+ verse identification accuracy (correct verse in top 3 results) using Speech-to-Text and fuzzy matching
 - Acquire 1,000 active users within first 30 days post-launch through targeted marketing ($200 budget)
-- Validate cost sustainability by monitoring Azure STT costs against voluntary Sadaqah donations
+- Validate cost sustainability by monitoring Azure STT costs against freemium subscription revenue ($1/month or $10/year via RevenueCat)
 - Collect 5,000+ user searches with feedback to continuously improve matching algorithm
 - Deliver a privacy-first, culturally respectful user experience that builds trust within the Muslim community
 
@@ -31,5 +31,6 @@ This PRD is based on the product owner's personal observations and anecdotal und
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
 | 2026-01-19 | 1.0 | Initial PRD creation for Lawh | PM John |
+| 2026-02-26 | 1.1 | Changed monetization from Sadaqah donations to freemium subscription model | PM John |
 
 ---

@@ -22,9 +22,11 @@ The overall feel should be: **serene, trustworthy, and effortless.**
 
 4. **Frictionless Feedback:** Thumbs up/down buttons are always visible but never intrusive—positioned naturally at bottom of results, never blocking content
 
-5. **Prominent Sadaqah Support:** "Support Lawh" donation button is prominently visible on main screen and accessible in settings, encouraging voluntary contributions without pressure
+5. **Clear Freemium Value:** Free tier shows usage counter (searches remaining) and non-intrusive banner ads; "Upgrade to Premium" button is accessible but respectful, encouraging subscription to remove ads and limits without pressure
 
 6. **Contextual Location Collection:** Location data (city/region) is collected at the time of each search (tied to search context) rather than as a one-time permission, with clear opt-in/opt-out capability
+
+7. **Respectful Ad Integration:** Banner ads appear at screen bottom (non-intrusive), interstitial ads appear before searches (after first search)—ads never interrupt reading, results viewing, or the Quran reader experience. First-time users get an ad-free first session
 
 ## Core Screens and Views
 
@@ -33,8 +35,11 @@ From a product perspective, these are the critical screens necessary to deliver 
 1. **Main Screen (Listen/Home)**
    - Large, centered "Listen" button (primary CTA)
    - Visual feedback during 10-15 second recording (progress indicator, waveform animation)
-   - **Prominent "Support Lawh (Sadaqah)" button** (secondary CTA, clearly visible but not blocking primary action)
+   - **Free tier usage counter** ("3/3 searches today" or "Upgrade to Premium")
+   - **"Upgrade to Premium" button** (secondary CTA for free users, clearly visible but not blocking primary action)
+   - **Banner ad at bottom** (free tier only, not during first app session)
    - Settings icon (top-right corner)
+   - Navigation to Explore (Recent Tab) page
 
 2. **Results Screen**
    - Verse identification(s) with confidence indicator
@@ -52,20 +57,35 @@ From a product perspective, these are the critical screens necessary to deliver 
    - Simple "Back to Search" navigation
    - Minimal chrome/UI elements to focus on text
 
-4. **Settings Screen**
+4. **Explore Page (Recent Tab)**
+   - List of last 20 identified verses (surah name, verse number, timestamp)
+   - Tap to re-open in Quran Reader
+   - **Available to ALL users** (free and paid)
+   - **Banner ad at bottom** (free tier only, not during first app session)
+   - Quick access to previously identified verses without re-recording
+
+5. **Settings Screen**
    - Location sharing toggle with explanation ("Collected with each search to understand regional recitation preferences")
    - Privacy policy link
    - Data deletion request option
    - About Lawh section
    - Support/Feedback contact
-   - "Support Lawh (Sadaqah)" donation link
+   - "Manage Subscription" link (upgrade, restore purchases, view status)
 
-5. **Error/Retry Screen**
+6. **Error/Retry Screen**
    - User-friendly error messaging (per FR13)
    - Clear guidance: "Try recording in a quieter space" or "Check your internet connection"
    - "Try Again" button prominently displayed
 
-6. **First-Launch Onboarding (Optional)**
+7. **Paywall/Subscription Screen**
+   - Triggered when free tier limit reached (3/day or 10/month)
+   - Clear value proposition: "Unlock unlimited searches + remove all ads"
+   - Pricing options: $1/month or $10/year (2 months free)
+   - "Restore Purchases" link for reinstalls
+   - "Maybe Later" dismissal option (returns to main screen)
+   - Design: Non-manipulative, respectful presentation
+
+8. **First-Launch Onboarding (Optional)**
    - 2-3 screens maximum explaining: "Hear a verse → Tap Listen → Get the verse"
    - Location permission explanation (collected with each search)
    - Skippable without penalty

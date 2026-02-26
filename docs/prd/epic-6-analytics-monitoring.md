@@ -1,13 +1,13 @@
 # Epic 6: Analytics & Monitoring Backend
 
-**Expanded Goal:** Build backend analytics infrastructure including admin dashboard for monitoring key metrics (search volume, STT costs, donation revenue, accuracy trends, user retention), cost-per-search calculations, and data export capabilities for continuous improvement insights. This epic addresses Goal #4 (cost sustainability validation) and provides ongoing operational visibility.
+**Expanded Goal:** Build backend analytics infrastructure including admin dashboard for monitoring key metrics (search volume, STT costs, subscription revenue, accuracy trends, user retention), cost-per-search calculations, and data export capabilities for continuous improvement insights. This epic addresses Goal #4 (cost sustainability validation) and provides ongoing operational visibility.
 
 **MVP Scope Clarification:**
 - **IN MVP (Required):** Stories 6.1-6.2 (Data aggregation + API endpoints) - Essential for operational visibility and cost monitoring from Day 1
 - **FLEXIBLE (Can defer to Week 5 post-launch):** Stories 6.3-6.4 (Admin web UI + Alerts) - Can manually query API endpoints via Postman if time pressure
 - **RECOMMENDED IN MVP:** Stories 6.5-6.7 (Data export, retention calculation, documentation) - Enables Goal #4 validation and continuous improvement
 
-**Launch Blocker:** NO - Epic 6 can be deferred entirely if necessary. However, Stories 6.1-6.2 are STRONGLY RECOMMENDED to validate cost sustainability (Goal #4) from Day 1. Without these, you'll be flying blind on Azure STT costs vs. donation revenue.
+**Launch Blocker:** NO - Epic 6 can be deferred entirely if necessary. However, Stories 6.1-6.2 are STRONGLY RECOMMENDED to validate cost sustainability (Goal #4) from Day 1. Without these, you'll be flying blind on Azure STT costs vs. subscription revenue.
 
 **Timeline Flexibility:** If Epics 1-5 take full 4 weeks, deploy Stories 6.1-6.2 in Week 5 (2 days effort) and defer Stories 6.3-6.7 to Phase 2.
 
@@ -34,7 +34,8 @@
    - Average confidence score across all searches
    - Azure STT usage: Total audio duration processed (minutes)
    - Azure STT estimated cost: duration × pricing ($1/hour)
-   - Donations received: Total amount, count, average donation
+   - Subscription revenue: Total MRR, new subscribers, churned subscribers
+   - Ad revenue: Banner impressions, interstitial impressions, estimated ad revenue (from AdMob)
 3. **Database schema:**
    ```sql
    analytics_daily (
@@ -48,8 +49,12 @@
      avg_confidence_score: float,
      stt_minutes_used: float,
      stt_estimated_cost_usd: float,
-     donations_total_usd: float,
-     donations_count: int,
+     subscription_revenue_usd: float,
+     new_subscribers: int,
+     churned_subscribers: int,
+     ad_banner_impressions: int,
+     ad_interstitial_impressions: int,
+     ad_revenue_estimate_usd: float,
      created_at: timestamp
    )
    ```
@@ -78,9 +83,11 @@
        "positive_feedback_rate": 78.5,
        "avg_confidence_score": 86.2,
        "total_stt_cost_usd": 14.32,
-       "total_donations_usd": 45.00,
+       "subscription_mrr_usd": 45.00,
+       "ad_revenue_usd": 12.50,
+       "total_revenue_usd": 57.50,
        "cost_per_search_usd": 0.006,
-       "donation_conversion_rate": 3.2
+       "free_to_paid_conversion_rate": 3.2
      }
      ```
 2. **Endpoint: GET /admin/metrics/trends**
@@ -93,11 +100,17 @@
      - Cost per search (average and by day)
      - Projected monthly cost at current usage rate
 4. **Endpoint: GET /admin/metrics/revenue**
-   - Donation tracking:
-     - Total donations by day
-     - Donation conversion rate (% of active users who donated)
-     - Average donation amount
-     - Top donation amounts (anonymized)
+   - Subscription tracking:
+     - MRR (monthly recurring revenue) by day
+     - Free to paid conversion rate (% of free users who subscribed)
+     - New subscriptions by day
+     - Churned subscriptions by day
+     - Active subscribers (monthly vs yearly breakdown)
+   - Ad revenue tracking:
+     - Banner ad impressions by day
+     - Interstitial ad impressions by day
+     - Estimated ad revenue (from AdMob reporting API or manual entry)
+     - eCPM trends (effective cost per 1,000 impressions)
 5. **Endpoint: GET /admin/metrics/accuracy**
    - Accuracy metrics:
      - Positive feedback rate over time
@@ -135,18 +148,22 @@
      - Unique users (last 7 days)
      - Positive feedback rate
      - Azure STT costs (last 7 days)
-     - Total donations (last 7 days)
+     - Subscription MRR (last 7 days)
+     - Ad revenue (last 7 days)
+     - Total revenue (subscriptions + ads)
    - Date range selector: Last 7/30/90 days or custom range
 4. **Charts & graphs:**
    - Line chart: Daily searches over time
    - Line chart: Positive feedback rate over time
    - Bar chart: Azure STT costs by day
-   - Bar chart: Donations by day
+   - Bar chart: New subscriptions by day
+   - Line chart: Ad revenue by day
    - Pie chart: Confidence level distribution (high/medium/low)
+   - Pie chart: Revenue breakdown (subscriptions vs ads)
 5. **Tables:**
    - Recent searches table: Search ID, confidence, result, feedback, timestamp (last 100)
    - Failed searches table: Searches with negative feedback or low confidence (for debugging)
-   - Donations table: Amount, currency, timestamp (anonymized, no user details)
+   - Subscriptions table: Plan type (monthly/yearly), status, start date, expiry date (anonymized, no user details)
 6. **Responsive design:** Works on desktop and tablet (mobile optional)
 7. **Deployment:** Hosted at `https://admin.lawh.app` or subdomain, HTTPS required
 8. **Security:** Requires login, no public access, logout button, session timeout
@@ -172,7 +189,7 @@
    - If API error rate >5% of requests, send alert
    - If Azure STT failures >10% of searches, send alert
 4. **Revenue alerts (informational):**
-   - Daily summary email: Searches, costs, donations, net cost
+   - Daily summary email: Searches, costs, subscription revenue, net cost
    - Weekly summary: Trends and insights
 5. **Alert delivery:**
    - Email to configured admin address (SendGrid, AWS SES, or SMTP)
@@ -265,7 +282,7 @@
 2. **Metrics glossary:**
    - Positive feedback rate: % of searches with thumbs up (target: ≥75%)
    - Cost per search: Azure STT cost / total searches (target: <$0.10)
-   - Donation conversion rate: % of users who donated (target: ≥5%)
+   - Free to paid conversion rate: % of free users who subscribed (target: ≥5%)
    - Confidence distribution: % of searches in high/medium/low buckets (target: 80%+ high)
 3. **Troubleshooting guide:**
    - What to do if costs spike
@@ -292,7 +309,7 @@
 **Launch Blocker:** NO - Can be deferred to post-launch if timeline is tight
 
 **Critical Dependencies:**
-- Depends on Epics 1-4 (data sources: searches, feedback, donations)
+- Depends on Epics 1-4 (data sources: searches, feedback, subscriptions)
 - Story 6.2-6.3 can start in parallel with Epic 5 (doesn't block launch)
 
 **Definition of Done:**

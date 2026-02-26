@@ -74,12 +74,13 @@ The following epics represent the high-level structure of the Lawh MVP developme
 
 ## Epic 5: Monetization & Launch Preparation
 
-**Goal:** Add Sadaqah donation integration (Stripe), complete app store submission requirements (privacy labels, screenshots, testing), final polish, and production deployment with basic error logging.
+**Goal:** Add freemium subscription integration (RevenueCat with Apple IAP and Google Play Billing), advertisement integration (Google AdMob), complete app store submission requirements (privacy labels, screenshots, testing), final polish, and production deployment with basic error logging.
 
 **Key Deliverables:**
-- Prominent "Support Lawh (Sadaqah)" button on main screen and in settings
-- Stripe payment integration for international donations
-- Donation confirmation flow and thank-you messaging
+- Freemium subscription model: Free tier (3 searches/day, 10/month, with ads) and Paid tier ($1/month or $10/year, ad-free + unlimited)
+- RevenueCat SDK integration for iOS (Apple IAP) and Android (Google Play Billing)
+- Google AdMob integration: Banner ads (Home, Explore pages) + Interstitial ads (before searches)
+- Subscription management UI with paywall and restore purchases
 - App store assets: Screenshots, app descriptions, keywords, promotional text
 - Privacy nutrition labels (iOS App Store, Google Play)
 - App icon, splash screen, and branding finalization
@@ -88,13 +89,13 @@ The following epics represent the high-level structure of the Lawh MVP developme
 - Basic error logging (Sentry or custom) for production monitoring
 - App Store and Google Play submission
 
-**Why Fifth:** Donation functionality validates cost sustainability (Goal #4). App store assets and privacy labels are required for public launch. Depends on completed UI and features from Epics 1-4. This epic transforms the working prototype into a production-ready, publicly available product.
+**Why Fifth:** Freemium subscription functionality validates cost sustainability (Goal #4). App store assets and privacy labels are required for public launch. Depends on completed UI and features from Epics 1-4. This epic transforms the working prototype into a production-ready, publicly available product.
 
 ---
 
 ## Epic 6: Analytics & Monitoring Backend
 
-**Goal:** Build backend analytics infrastructure including admin dashboard for monitoring key metrics (search volume, STT costs, donation revenue, accuracy trends, user retention), cost-per-search calculations, and data export capabilities for continuous improvement insights.
+**Goal:** Build backend analytics infrastructure including admin dashboard for monitoring key metrics (search volume, STT costs, subscription revenue, ad revenue, accuracy trends, user retention), cost-per-search calculations, and data export capabilities for continuous improvement insights.
 
 **MVP Scope Clarification:**
 - **IN MVP (Required):** Stories 6.1-6.2 (Data aggregation + API endpoints) - Provides operational visibility from Day 1
@@ -109,19 +110,19 @@ The following epics represent the high-level structure of the Lawh MVP developme
   - `/admin/metrics/overview` - High-level KPIs dashboard
   - `/admin/metrics/searches` - Search volume trends
   - `/admin/metrics/costs` - Azure STT costs and cost-per-search
-  - `/admin/metrics/revenue` - Donation tracking and conversion rates
+  - `/admin/metrics/revenue` - Subscription tracking and conversion rates
   - `/admin/metrics/accuracy` - Identification accuracy trends from feedback
   - `/admin/metrics/retention` - User retention analysis
   - `/admin/data/export` - CSV export for detailed analysis
 - Simple admin web interface with authentication (basic auth or API key)
 - Automated daily metric calculation (scheduled task/cron job)
 - Cost monitoring: Azure STT usage tracking and cost-per-search calculations
-- Revenue tracking: Stripe webhook integration for donation events
+- Revenue tracking: RevenueCat webhook integration for subscription events
 
 **Key Metrics Tracked:**
 - Search volume: Total searches, daily/weekly active users, searches per user
 - Cost metrics: Azure STT cost per search, total monthly costs, cost trends
-- Revenue metrics: Total donations, conversion rate, average donation amount
+- Revenue metrics: Total subscription revenue, conversion rate (free → paid), MRR (monthly recurring revenue)
 - Accuracy metrics: Positive feedback percentage, confidence score distribution
 - Retention metrics: Day 1/7/30 retention rates, repeat search behavior
 

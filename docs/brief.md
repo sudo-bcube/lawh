@@ -63,7 +63,7 @@ Lawh uses Speech-to-Text (STT) technology combined with intelligent fuzzy matchi
 1. **Works with ANY reciter** - Unlike audio fingerprinting approaches, STT handles live recitations from unknown reciters
 2. **Confidence-based UX** - Reduces decision fatigue by showing fewer options when system is certain
 3. **Transparent data practices** - Optional location and usage data collection with clear disclosure; users control what they share
-4. **Culturally aligned monetization** - Sadaqah/donation model instead of intrusive ads
+4. **Sustainable freemium model** - Free tier with limited searches and non-intrusive ads, paid tier for unlimited ad-free experience
 
 **Why This Will Succeed:**
 
@@ -145,7 +145,7 @@ MVP delivers the core "Shazam moment" for Quran verses. Post-MVP, we layer on re
 - **Launch MVP by February 14, 2026** - 4-week development timeline from mid-January to Valentine's Day
 - **Achieve 1,000 active users within first 30 days** post-launch through targeted marketing ($500 budget)
 - **Validate technical feasibility** - Achieve 85%+ verse identification accuracy (correct verse in top 3 results)
-- **Cost sustainability assessment** - Monitor Azure STT costs vs. voluntary Sadaqah donations to inform Phase 2 monetization decisions
+- **Cost sustainability validation** - Monitor Azure STT costs vs. subscription + ad revenue to ensure sustainable unit economics
 - **Gather training data** - Collect 5,000+ user searches with feedback to improve matching algorithm
 
 **User Success Metrics**
@@ -163,7 +163,7 @@ MVP delivers the core "Shazam moment" for Quran verses. Post-MVP, we layer on re
 - **Accuracy Confidence Distribution:** ≥80% of searches return high confidence results (80%+)
 - **User Retention (Week 1):** ≥40% of new users perform second search within 7 days
 - **Cost per Search:** Azure STT costs remain under $0.10 per search on average
-- **Donation Conversion Rate:** ≥5% of active users make voluntary Sadaqah contribution
+- **Subscription Conversion Rate:** ≥5% of free tier users convert to paid subscription ($1/month or $10/year)
 - **Data Opt-In Rate:** ≥60% of users consent to optional location/usage data sharing
 
 ---
@@ -184,7 +184,9 @@ MVP delivers the core "Shazam moment" for Quran verses. Post-MVP, we layer on re
 
 - **Optional Location Data (City/Region):** Request city/region with clear disclosure and opt-in/opt-out toggle. Enables regional insights for future features.
 
-- **Sadaqah/Donation Button:** "Support this project" voluntary contribution option, no features locked behind paywall. Culturally appropriate monetization test with zero user friction.
+- **Freemium Subscription Model:** Free tier with 3 searches/day (10/month) and banner + interstitial ads (Google AdMob). Paid tier ($1/month or $10/year via RevenueCat) unlocks unlimited searches and removes all ads. Sustainable monetization from Day 1.
+
+- **Recent Tab (Explore Page):** Shows recently identified verses for quick reference. Available to all users (free and paid) to encourage repeat engagement.
 
 - **Basic Noise Suppression:** Azure STT's built-in noise reduction feature enabled by default. Improves real-world usability in mosques and noisy environments at zero additional cost.
 
@@ -193,7 +195,6 @@ MVP delivers the core "Shazam moment" for Quran verses. Post-MVP, we layer on re
 - Reciter identification (which Sheikh is reciting)
 - Audio fingerprinting for known recordings
 - Offline mode / on-device processing
-- Premium subscription features
 - Quran learning courses or upsells
 - Advanced audio preprocessing algorithms
 - Admin panel for managing reciters
@@ -209,7 +210,7 @@ The MVP is considered successful if:
 1. **Technical validation:** 85%+ of test searches return the correct verse in top 3 results
 2. **User validation:** 75%+ of users give positive feedback on their identification results
 3. **Timeline validation:** App launches on App Store/Google Play by February 14, 2026
-4. **Cost validation:** Azure STT costs are predictable and manageable (<$1,000/month at 1,000 users)
+4. **Cost validation:** Azure STT costs covered by subscription + ad revenue (positive unit economics at 1,000 users)
 5. **Data validation:** 5,000+ user searches with feedback collected for algorithm improvement
 
 If these criteria are met, we proceed to Phase 2 (reciter identification, premium features). If not, we iterate on MVP before adding complexity.
@@ -224,11 +225,9 @@ After validating MVP success, Phase 2 focuses on depth and differentiation:
 
 - **Reciter Identification:** Identify which specific reciter (Sheikh Mishary, Sudais, Abdul Basit, etc.) is reciting the verse using audio fingerprinting or voice classification. Requires building library of 10+ complete recitations and voice recognition system.
 
-- **Premium Subscription:** Unlock advanced features including unlimited searches (if free tier gets capped), offline mode, detailed tafsir, saved favorites, and ad-free experience. Provides sustainable revenue beyond donations. Pricing to be determined based on MVP cost data and user feedback.
-
-- **Respectful Ads (Pre-Phase 2 if needed):** If Sadaqah donations prove insufficient to cover Azure costs, introduce ads exclusively from Islamic businesses (halal food, modest fashion, Islamic books, Hajj services). Never shown during recognition or reading. Optional ad removal tier.
-
 - **Admin Panel for Reciter Management:** Internal tool to add new reciters, manage audio libraries, monitor quality, and curate content without requiring app updates.
+
+- **Premium Tier Enhancements:** Add offline mode, detailed tafsir, saved favorites to paid subscription. Expand value proposition beyond ad-free + unlimited searches.
 
 ### Long-Term Vision (Q2-Q3 2026)
 
@@ -290,7 +289,8 @@ Each phase builds on proven value from previous phase. We only add complexity af
   - Database: DigitalOcean managed PostgreSQL or Supabase free tier
   - Web frontend: Vercel or Netlify (free tier)
   - Analytics: Firebase Analytics (free) or custom backend tracking
-- **Payment Processing:** Stripe with Islamic payment method support for Sadaqah donations
+- **Payment Processing:** RevenueCat SDK wrapping Apple In-App Purchase (iOS) and Google Play Billing (Android) for subscription management
+- **Advertising:** Google AdMob for banner and interstitial ads (free tier users only)
 
 ### Architecture Considerations
 
@@ -302,7 +302,8 @@ Each phase builds on proven value from previous phase. We only add complexity af
 - **Integration Requirements:**
   - Azure Speech-to-Text API integration with Arabic language support
   - Quran text database (Tanzil.net, EveryAyah.com, or similar)
-  - Payment gateway for Sadaqah donations
+  - RevenueCat SDK for subscription management (iOS + Android)
+  - Google AdMob SDK for advertisements
   - App Store, Google Play, and web deployment pipelines
 - **Security/Compliance:**
   - HTTPS/TLS for all API communication
@@ -330,7 +331,7 @@ Each phase builds on proven value from previous phase. We only add complexity af
 - Fuzzy matching algorithm can achieve 85%+ verse identification accuracy with imperfect STT transcriptions
 - Target users (mosque attendees, pilgrims) have smartphones with microphone access and internet connectivity
 - Users will tolerate 3-5 second wait time for verse identification (vs. instant like Shazam for music)
-- Sadaqah/donation model will resonate with Muslim users and offset at least partial infrastructure costs
+- Freemium model with ads will generate sufficient revenue to offset infrastructure costs (target: 5%+ free-to-paid conversion)
 - Optional data collection (60%+ opt-in rate) provides sufficient training data for algorithm improvement
 - Flutter can deliver production-quality mobile apps within 4-week timeline for solo developer
 - Quran text databases (Tanzil.net, EveryAyah.com) are available under permissive licenses for commercial use
@@ -344,7 +345,7 @@ Each phase builds on proven value from previous phase. We only add complexity af
 
 - **STT Accuracy Risk:** Azure STT may not achieve 70%+ accuracy with Quranic Arabic recitations, especially with varied reciters, accents, and Tajweed pronunciation. This is the highest-risk assumption - if STT fails, the entire product doesn't work. **Mitigation:** Priority #1 action is to test Azure STT with real samples THIS WEEK before full development.
 
-- **Cost Scalability Risk:** If 1,000 users perform 5 searches/day at 15 seconds each, Azure STT costs could reach $630/month, far exceeding donation revenue. **Mitigation:** Monitor costs closely, optimize audio length, consider fallback STT providers (Google, AWS) if Azure pricing becomes unsustainable.
+- **Cost Scalability Risk:** If 1,000 users perform 5 searches/day at 15 seconds each, Azure STT costs could reach $630/month. **Mitigation:** Free tier limits (3/day, 10/month) cap Azure costs per user; subscription revenue ($1/month) + ad revenue offset costs; monitor unit economics closely.
 
 - **4-Week Timeline Risk:** Aggressive deadline with solo developer may lead to technical debt, poor UX, or incomplete features. Scope creep is a major threat. **Mitigation:** Ruthless scope discipline - if a feature isn't in the "Core Features (Must Have)" list, it gets deferred to Phase 2.
 
@@ -368,7 +369,7 @@ Each phase builds on proven value from previous phase. We only add complexity af
 - Flutter vs. React Native technical feasibility testing - which actually delivers faster for solo developer?
 - Tajweed pronunciation handling - STT trained on modern Arabic might struggle with classical Quranic pronunciation
 - Scalability architecture - current plan works for MVP, but need to design for 10K+ users to avoid painful migration later
-- Islamic payment methods - Sadaqah donations need to support Zakat-friendly payment processors, not just Stripe/PayPal
+- Ad content guidelines - Ensure AdMob ads shown are appropriate for Islamic app context (filter inappropriate categories)
 - App naming and branding - "Shazam for Quran" is descriptive but not a product name; needs creative exploration
 - Accessibility considerations - visual impairment, hearing impairment, elderly users - how does app serve diverse needs?
 
@@ -385,7 +386,7 @@ This Project Brief was informed by a comprehensive brainstorming session conduct
 - **Market Validation:** Existing competitor (Tarteel AI, 1M+ downloads) validates market need but has poor verse discovery functionality, creating clear competitive opportunity
 - **Technical Feasibility:** Modern Arabic STT technology (Azure, Google) has reached accuracy threshold needed for Quranic recitation recognition
 - **Scope Refinement:** Removing reciter identification from MVP dramatically simplifies development while preserving core value proposition
-- **Cultural Alignment:** Sadaqah/donation model + privacy-first design align with Islamic values and build trust
+- **Cultural Alignment:** Non-intrusive freemium model + privacy-first design align with Islamic values and build trust
 - **Cost Management:** $500 marketing budget + minimal hosting (<$20/month) + Azure free tier enables sustainable MVP launch
 
 **Brainstorming Techniques Used:**

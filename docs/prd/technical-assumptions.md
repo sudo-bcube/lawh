@@ -68,7 +68,8 @@ lawh/
 4. **External Services:**
    - **Azure Speech-to-Text:** Transcription service (API calls from backend for each search)
    - **PostgreSQL Database:** User searches, feedback, optional location data, analytics, and Quran text storage
-   - **Stripe API:** Payment processing for Sadaqah donations
+   - **RevenueCat:** Subscription management wrapping Apple IAP and Google Play Billing
+   - **Google AdMob:** Advertisement serving for free tier users (banner + interstitial ads)
 
 **Why Monolithic (not Microservices):**
 - MVP scope is small—no need for service decomposition
@@ -96,7 +97,7 @@ lawh/
 - End-to-end flow: audio upload → STT → matching → result display
 - Azure STT API integration (mocked for CI/CD, real calls in staging)
 - Database operations (CRUD for searches, feedback, user data)
-- Payment processing integration (Stripe test mode)
+- Subscription integration (RevenueCat sandbox mode)
 - Local Quran database queries and verse retrieval
 
 **Manual Testing:**
@@ -153,7 +154,8 @@ lawh/
 
 **Third-Party Services:**
 - **Speech-to-Text:** Azure Cognitive Services Speech-to-Text (5 hours/month free, then ~$1/hour)
-- **Payment Processing:** Stripe (2.9% + $0.30 per transaction) or alternative supporting international donations
+- **Subscription Management:** RevenueCat (free tier up to $2.5k MRR, then 1%) wrapping Apple IAP (15-30% fee) and Google Play Billing (15-30% fee)
+- **Advertising:** Google AdMob (free to integrate, revenue share via eCPM—typically $1-5 per 1,000 impressions for mobile apps)
 - **Quran Text Source:** Tanzil.net or EveryAyah.com (downloaded once, stored locally—NOT queried per search)
 
 **Development Tools:**

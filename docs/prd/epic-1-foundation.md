@@ -98,7 +98,7 @@
 4. Backend stores UUID in `users` table on first request
 5. No personal data (name, email, phone) is collected or associated with UUID
 6. User can request UUID deletion via settings (FR7, GDPR compliance)
-7. UUID is not transmitted to third parties (Azure STT, Stripe) except as anonymous identifier
+7. UUID is not transmitted to third parties (Azure STT, RevenueCat) except as anonymous identifier
 8. Test: Uninstall and reinstall app generates NEW UUID (device-based, not server-based)
 
 ---
@@ -152,7 +152,7 @@
 3. Domain or subdomain configured: `https://staging-api.lawh.app` or similar
 4. Health-check endpoint accessible: `GET https://staging-api.lawh.app/health` returns 200 OK
 5. PostgreSQL database deployed and connected (managed service or same server)
-6. Environment variables configured for staging (Azure STT API keys, Stripe test keys, database credentials)
+6. Environment variables configured for staging (Azure STT API keys, RevenueCat API keys, database credentials)
 7. Basic monitoring: Server uptime checks, error logging to console/file
 8. Deployment documentation: How to deploy updates, rollback, and access logs
 
