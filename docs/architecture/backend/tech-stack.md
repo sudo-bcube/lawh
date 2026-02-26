@@ -27,7 +27,7 @@
 | **Quran Text Storage** | JSON files | N/A | Verse data | In-memory loading, <50ms lookup |
 | **ORM** | SQLAlchemy | 2.0.x | Database access | Async support, migrations via Alembic |
 | **Speech-to-Text** | Google Cloud STT | v1 | Arabic transcription | Pure Arabic output, tested accuracy |
-| **Payments** | Stripe | Latest API | Sadaqah donations | International support |
+| **Subscriptions** | RevenueCat Webhooks | v1 | Subscription status sync | No backend SDK needed, HTTP webhooks |
 | **Backend Hosting (Primary)** | DigitalOcean Droplet | $6/month | API server | Cost-effective |
 | **Backend Hosting (Fallback)** | Heroku Eco | $7/month | Backup hosting | Easy deployment if DO issues |
 | **Database Hosting** | DigitalOcean Managed PostgreSQL | $15/month | Managed DB | Automated backups |

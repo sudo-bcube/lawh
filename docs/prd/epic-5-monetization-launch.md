@@ -20,6 +20,7 @@
    - Maximum 10 searches per month
    - Shows advertisements (banner + interstitial per Story 5.1b)
    - Clear usage counter displayed: "3/3 searches used today" or "10/10 this month"
+   - **Watch-to-unlock option:** When limit reached, user can watch a rewarded video ad to unlock 1 additional search (per Story 5.1b)
 3. **Paid tier benefits:**
    - Unlimited searches (no daily/monthly limits)
    - Ad-free experience (no banner or interstitial ads)
@@ -87,7 +88,15 @@
 6. **Ad frequency management:**
    - Interstitial ads: Maximum 1 per search attempt (not per minute)
    - Banner ads: Always visible on designated screens (not rotating)
-   - No video reward ads (keeps experience simple)
+   - Rewarded video ads: Only shown when user opts in to unlock extra search (see below)
+7. **Rewarded video ads (watch-to-unlock):**
+   - When free tier limit reached (daily or monthly), present option: "Watch a short video to unlock 1 extra search"
+   - User must watch complete video (non-skippable, typically 15-30 seconds)
+   - Upon completion: Grant 1 bonus search immediately
+   - Bonus searches do NOT roll over (use it or lose it within that session/day)
+   - Maximum 3 bonus searches per day via rewarded ads (prevents abuse)
+   - Ad unit ID configured: rewarded ad unit (separate from banner/interstitial)
+   - If rewarded ad fails to load: Show "No ads available, try again later" message
 7. **Error handling:**
    - If ad fails to load: Proceed without ad (don't block user)
    - Log ad failures for monitoring (Epic 6)

@@ -64,7 +64,33 @@ sequenceDiagram
     end
 ```
 
-## Workflow 3: Sadaqah Donation
+## Workflow 3: Subscription Management
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant App as Mobile App
+    participant RC as RevenueCat SDK
+    participant API as FastAPI Backend
+    participant DB as PostgreSQL
+
+    User->>App: Tap "Upgrade to Premium"
+    App->>App: Show Paywall (pricing options)
+    User->>App: Select subscription ($1/mo or $10/yr)
+
+    App->>RC: Purchase subscription
+    RC->>RC: Handle Apple IAP / Google Play Billing
+    RC-->>App: Purchase successful
+
+    RC->>API: Webhook: INITIAL_PURCHASE
+    API->>DB: Create/Update Subscription (active)
+    API-->>RC: 200 OK
+
+    App->>User: "Welcome to Premium!"
+```
+
+## Workflow 4: Usage Limit Enforcement
 
 ```mermaid
 sequenceDiagram
@@ -72,20 +98,53 @@ sequenceDiagram
     participant User
     participant App as Mobile App
     participant API as FastAPI Backend
-    participant Stripe as Stripe API
     participant DB as PostgreSQL
 
-    User->>App: Tap "Support Lawh (Sadaqah)"
-    User->>App: Select amount
+    User->>App: Tap "Listen" (initiate search)
+    App->>API: POST /api/v1/search
 
-    App->>API: POST /api/v1/donations
-    API->>Stripe: Create PaymentIntent
-    Stripe-->>API: Return client_secret
-    API->>DB: Save Donation (pending)
-    API-->>App: Return client_secret
+    API->>DB: Check subscription status
+    API->>DB: Check usage (daily/monthly)
 
-    App->>Stripe: Confirm payment (via SDK)
-    Stripe->>API: Webhook: payment_intent.succeeded
-    API->>DB: Update Donation (completed)
-    App->>User: "JazakAllahu Khayran!"
+    alt Premium User
+        API->>API: Process search (no limits)
+    else Free User Under Limits
+        API->>DB: Increment usage counters
+        API->>API: Process search
+    else Free User At Limit (has bonus)
+        API->>DB: Use bonus search
+        API->>API: Process search
+    else Free User At Limit (no bonus)
+        API-->>App: 429 Too Many Requests + usage info
+        App->>User: Show limit reached screen
+        User->>App: Watch rewarded ad OR upgrade
+    end
+
+    API-->>App: Return results
+```
+
+## Workflow 5: Bonus Search (Watch-to-Unlock)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant App as Mobile App
+    participant AdMob as Google AdMob
+    participant API as FastAPI Backend
+    participant DB as PostgreSQL
+
+    User->>App: Tap "Watch Video for 1 Search"
+    App->>AdMob: Request rewarded video ad
+    AdMob-->>App: Show rewarded video (15-30s)
+
+    User->>App: Complete watching video
+    AdMob-->>App: Ad completed callback
+
+    App->>API: POST /api/v1/users/{id}/bonus-search
+    API->>DB: Check bonus limit (max 3/day)
+    API->>DB: Grant bonus search
+    API-->>App: Bonus granted + usage summary
+
+    App->>User: "Bonus search unlocked!"
 ```

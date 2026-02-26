@@ -28,7 +28,9 @@ mobile/
 │   │   ├── results/            # Search results display
 │   │   ├── quran_reader/       # In-app Quran viewer
 │   │   ├── feedback/           # Thumbs up/down, ratings
-│   │   ├── donation/           # Sadaqah/Stripe integration
+│   │   ├── subscription/       # RevenueCat subscription management
+│   │   ├── ads/                # Google AdMob integration
+│   │   ├── usage/              # Usage tracking and limits
 │   │   └── settings/           # User preferences
 │   ├── core/
 │   │   ├── api/                # Backend API client
@@ -39,16 +41,19 @@ mobile/
 
 ## Backend API (FastAPI)
 
-**Responsibility:** Orchestrate STT transcription, execute fuzzy matching, manage user data, process donations.
+**Responsibility:** Orchestrate STT transcription, execute fuzzy matching, manage user data, track subscriptions and usage.
 
 **Key Interfaces:**
-- `POST /api/v1/search` - Audio upload and verse identification
+- `POST /api/v1/search` - Audio upload and verse identification (enforces usage limits)
 - `POST /api/v1/feedback` - Submit search feedback
 - `GET /api/v1/quran/{surah}/{ayah}` - Retrieve verse text
-- `POST /api/v1/donations` - Create Stripe payment intent
+- `POST /api/v1/webhooks/revenuecat` - Receive subscription status updates
+- `GET /api/v1/users/{user_id}/subscription` - Get subscription status
+- `GET /api/v1/users/{user_id}/usage` - Get usage counters
+- `POST /api/v1/users/{user_id}/bonus-search` - Grant bonus search
 - `GET /api/v1/health` - Health check endpoint
 
-**Dependencies:** Google Cloud STT, PostgreSQL, Stripe API, Quran JSON data
+**Dependencies:** Google Cloud STT, PostgreSQL, RevenueCat Webhooks, Quran JSON data
 
 **Technology Stack:** Python 3.12, FastAPI 0.115.x, SQLAlchemy 2.0, Pydantic
 
@@ -56,9 +61,9 @@ mobile/
 ```
 backend/
 ├── app/
-│   ├── api/v1/endpoints/       # HTTP layer
+│   ├── api/v1/endpoints/       # HTTP layer (search, feedback, webhooks, users)
 │   ├── core/                   # Config, security, dependencies
-│   ├── services/               # Business logic (STT, matching, payments)
+│   ├── services/               # Business logic (STT, matching, usage)
 │   ├── repositories/           # Data access layer
 │   ├── models/
 │   │   ├── domain/             # SQLAlchemy models
@@ -74,6 +79,8 @@ graph TB
         UI[UI Layer<br/>Screens & Widgets]
         Providers[Riverpod Providers<br/>State Management]
         API_Client[API Client<br/>REST Communication]
+        RC_SDK[RevenueCat SDK]
+        AdMob_SDK[AdMob SDK]
     end
 
     subgraph "Backend API (FastAPI)"
@@ -85,13 +92,14 @@ graph TB
             STT[STT Service]
             Match[Matching Service]
             Quran[Quran Service]
-            Pay[Stripe Service]
+            Usage[Usage Service]
         end
     end
 
     subgraph "External"
         Google[Google Cloud STT]
-        Stripe[Stripe API]
+        RevenueCat[RevenueCat<br/>Webhooks]
+        AdMob[Google AdMob]
     end
 
     subgraph "Data"
@@ -101,11 +109,15 @@ graph TB
 
     UI --> Providers
     Providers --> API_Client
+    Providers --> RC_SDK
+    Providers --> AdMob_SDK
     API_Client -->|HTTPS| Router
+    RC_SDK -->|Purchase| RevenueCat
+    AdMob_SDK -->|Ads| AdMob
+    RevenueCat -->|Webhook| Router
     Router --> Services
     Services --> Repos
     STT -->|API Call| Google
-    Pay -->|API Call| Stripe
     Match --> JSON
     Quran --> JSON
     Repos --> PG

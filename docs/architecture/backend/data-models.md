@@ -21,7 +21,8 @@
 **Relationships:**
 - Has many `Search` records
 - Has many `Feedback` records
-- Has many `Donation` records
+- Has one `Subscription` record
+- Has many `UserUsage` records
 
 ## Search
 
@@ -70,20 +71,46 @@
 - Belongs to `Search` (one-to-one)
 - Belongs to `User`
 
-## Donation
+## Subscription
 
-**Purpose:** Track Sadaqah donations for sustainability monitoring.
+**Purpose:** Track user subscription status for freemium model enforcement.
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `id` | UUID (PK) | Unique donation identifier |
+| `id` | UUID (PK) | Unique subscription identifier |
+| `user_id` | UUID (FK, unique) | Link to User (1:1) |
+| `revenuecat_user_id` | String (nullable) | RevenueCat app user ID |
+| `product_id` | String (nullable) | Subscription product (e.g., `lawh_monthly`, `lawh_yearly`) |
+| `status` | Enum | `active`, `expired`, `cancelled`, `grace_period`, `free` |
+| `platform` | Enum (nullable) | `ios`, `android`, `web` |
+| `expires_at` | Timestamp (nullable) | Subscription expiration date |
+| `created_at` | Timestamp | Record created |
+| `updated_at` | Timestamp | Last status update |
+
+**Relationships:**
+- Belongs to `User` (one-to-one)
+
+## UserUsage
+
+**Purpose:** Track daily and monthly search usage for free tier limit enforcement.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `id` | UUID (PK) | Unique usage record identifier |
 | `user_id` | UUID (FK) | Link to User |
-| `stripe_payment_id` | String | Stripe payment intent ID |
-| `amount_cents` | Integer | Donation amount in cents |
-| `currency` | String | Currency code (USD, GBP, etc.) |
-| `status` | Enum | `pending`, `completed`, `failed`, `refunded` |
-| `created_at` | Timestamp | Donation initiated |
-| `completed_at` | Timestamp (nullable) | Payment confirmed |
+| `date` | Date | Date of usage (unique per user per day) |
+| `daily_searches` | Integer | Searches performed today (resets daily) |
+| `monthly_searches` | Integer | Searches performed this month (resets monthly) |
+| `bonus_searches_earned` | Integer | Bonus searches earned via rewarded ads today |
+| `bonus_searches_used` | Integer | Bonus searches consumed today |
+| `created_at` | Timestamp | Record created |
+| `updated_at` | Timestamp | Last update |
+
+**Constraints:**
+- Unique constraint on (`user_id`, `date`)
+- `daily_searches` default 0
+- `monthly_searches` default 0
+- `bonus_searches_earned` max 3 per day
 
 **Relationships:**
 - Belongs to `User`
@@ -117,7 +144,8 @@
 ```mermaid
 erDiagram
     USER ||--o{ SEARCH : makes
-    USER ||--o{ DONATION : gives
+    USER ||--o| SUBSCRIPTION : has
+    USER ||--o{ USER_USAGE : tracks
     SEARCH ||--o| FEEDBACK : receives
     USER ||--o{ FEEDBACK : provides
 
@@ -149,11 +177,23 @@ erDiagram
         boolean opened_quran_reader
     }
 
-    DONATION {
+    SUBSCRIPTION {
+        uuid id PK
+        uuid user_id FK UK
+        varchar revenuecat_user_id
+        varchar product_id
+        enum status
+        enum platform
+        timestamp expires_at
+    }
+
+    USER_USAGE {
         uuid id PK
         uuid user_id FK
-        varchar stripe_payment_id UK
-        int amount_cents
-        enum status
+        date date
+        int daily_searches
+        int monthly_searches
+        int bonus_searches_earned
+        int bonus_searches_used
     }
 ```

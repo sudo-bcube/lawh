@@ -20,7 +20,8 @@
 | **Shared Preferences** | shared_preferences | 2.2+ | User settings persistence | Simple key-value storage for location toggle, theme preference, anonymous UUID |
 | **Permissions** | permission_handler | 11.3+ | Runtime permissions management | Handles microphone, location permissions across iOS/Android with unified API |
 | **Analytics** | firebase_analytics | 11.0+ | Usage tracking and feedback collection | Free tier, integrates with Firebase ecosystem, privacy-compliant event tracking |
-| **Payments** | stripe_flutter | 11.0+ | Sadaqah donation processing | Official Stripe SDK, PCI-compliant, supports diverse payment methods |
+| **Subscriptions** | purchases_flutter | 6.0+ | RevenueCat subscription management | Cross-platform IAP, handles Apple/Google billing, entitlement management |
+| **Advertisements** | google_mobile_ads | 5.0+ | AdMob ads (banner, interstitial, rewarded) | Official Google SDK, GDPR consent via UMP, rewarded video for bonus searches |
 | **Testing Framework** | flutter_test | Built-in | Unit and widget testing | Official testing framework, excellent widget testing support |
 | **Integration Testing** | integration_test | Built-in | E2E testing | Tests full user flows on real devices/emulators |
 | **Mocking** | mockito | 5.4+ | Test mocking | Generate mocks for API clients, repositories, services |
@@ -72,7 +73,8 @@
 
 - Azure STT accessed via REST API (no official Dart SDK, using dio for HTTP calls)
 - Quran text database fits in SQLite (~5MB as mentioned in UI/UX spec)
-- Stripe Islamic payment processor support requires verification before implementation
+- RevenueCat handles Apple IAP and Google Play Billing via single SDK
+- AdMob requires GDPR consent handling via User Messaging Platform (UMP)
 - Firebase free tier adequate for initial 1,000 users
 
 ---

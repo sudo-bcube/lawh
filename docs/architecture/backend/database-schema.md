@@ -11,7 +11,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ENUM TYPES
 CREATE TYPE device_type AS ENUM ('ios', 'android', 'web');
 CREATE TYPE feedback_rating AS ENUM ('thumbs_up', 'thumbs_down', 'none_correct');
-CREATE TYPE donation_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
+CREATE TYPE subscription_status AS ENUM ('active', 'expired', 'cancelled', 'grace_period', 'free');
+CREATE TYPE subscription_platform AS ENUM ('ios', 'android', 'web');
 
 -- USERS TABLE
 CREATE TABLE users (
@@ -57,16 +58,31 @@ CREATE TABLE feedback (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
--- DONATIONS TABLE
-CREATE TABLE donations (
+-- SUBSCRIPTIONS TABLE
+CREATE TABLE subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    revenuecat_user_id VARCHAR(255),
+    product_id VARCHAR(100),
+    status subscription_status NOT NULL DEFAULT 'free',
+    platform subscription_platform,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- USER USAGE TABLE (for free tier limit tracking)
+CREATE TABLE user_usage (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    stripe_payment_id VARCHAR(255) NOT NULL UNIQUE,
-    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
-    currency CHAR(3) NOT NULL DEFAULT 'usd',
-    status donation_status NOT NULL DEFAULT 'pending',
+    date DATE NOT NULL,
+    daily_searches INTEGER NOT NULL DEFAULT 0,
+    monthly_searches INTEGER NOT NULL DEFAULT 0,
+    bonus_searches_earned INTEGER NOT NULL DEFAULT 0 CHECK (bonus_searches_earned <= 3),
+    bonus_searches_used INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    completed_at TIMESTAMP WITH TIME ZONE
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, date)
 );
 
 -- INDEXES
@@ -75,6 +91,8 @@ CREATE INDEX idx_searches_user_id ON searches(user_id);
 CREATE INDEX idx_searches_created_at ON searches(created_at);
 CREATE INDEX idx_searches_confidence ON searches(confidence_score);
 CREATE INDEX idx_feedback_search_id ON feedback(search_id);
-CREATE INDEX idx_donations_user_id ON donations(user_id);
-CREATE INDEX idx_donations_status ON donations(status);
+CREATE INDEX idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX idx_subscriptions_status ON subscriptions(status);
+CREATE INDEX idx_subscriptions_expires_at ON subscriptions(expires_at);
+CREATE INDEX idx_user_usage_user_date ON user_usage(user_id, date);
 ```

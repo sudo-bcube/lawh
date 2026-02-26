@@ -176,23 +176,46 @@ lawh/
 │   │   │       └── datasources/
 │   │   │           └── settings_local_datasource.dart  # SharedPreferences wrapper
 │   │   │
-│   │   └── donation/
-│   │       ├── presentation/
-│   │       │   ├── widgets/
-│   │       │   │   ├── donation_modal.dart       # Bottom sheet modal
-│   │       │   │   └── donation_button.dart      # "Support Lawh" CTA
-│   │       │   └── providers/
-│   │       │       └── donation_provider.dart
-│   │       ├── domain/
-│   │       │   ├── models/
-│   │       │   │   └── donation.dart             # Donation transaction model
-│   │       │   └── repositories/
-│   │       │       └── payment_repository.dart
-│   │       └── data/
-│   │           ├── repositories/
-│   │           │   └── stripe_payment_repository_impl.dart
-│   │           └── datasources/
-│   │               └── stripe_datasource.dart    # Stripe SDK wrapper
+│   │   ├── subscription/
+│   │       │   ├── presentation/
+│   │       │   │   ├── screens/
+│   │       │   │   │   └── paywall_screen.dart       # Subscription paywall
+│   │       │   │   ├── widgets/
+│   │       │   │   │   ├── subscription_tile.dart    # Settings tile for upgrade/manage
+│   │       │   │   │   └── usage_counter.dart        # "X/3 searches today" display
+│   │       │   │   └── providers/
+│   │       │   │       └── subscription_provider.dart
+│   │       │   ├── domain/
+│   │       │   │   ├── models/
+│   │       │   │   │   └── subscription_status.dart  # Subscription state model
+│   │       │   │   └── repositories/
+│   │       │   │       └── subscription_repository.dart
+│   │       │   └── data/
+│   │       │       ├── repositories/
+│   │       │       │   └── revenuecat_subscription_repository_impl.dart
+│   │       │       └── datasources/
+│   │       │           └── revenuecat_datasource.dart  # RevenueCat SDK wrapper
+│   │       │
+│   │       ├── ads/
+│   │       │   ├── presentation/
+│   │       │   │   ├── screens/
+│   │       │   │   │   └── limit_reached_screen.dart  # Watch ad or upgrade options
+│   │       │   │   ├── widgets/
+│   │       │   │   │   └── banner_ad_widget.dart      # Adaptive banner ad
+│   │       │   │   └── providers/
+│   │       │   │       └── ads_provider.dart
+│   │       │   └── domain/
+│   │       │       └── services/
+│   │       │           ├── interstitial_ad_service.dart
+│   │       │           └── rewarded_ad_service.dart   # Watch-to-unlock ads
+│   │       │
+│   │       └── usage/
+│   │           ├── presentation/
+│   │           │   └── providers/
+│   │           │       └── usage_provider.dart        # Usage state for UI
+│   │           └── domain/
+│   │               └── services/
+│   │                   └── usage_tracker_service.dart # Daily/monthly limit tracking
 │   │
 │   └── shared/
 │       ├── widgets/
@@ -241,7 +264,7 @@ lawh/
 ## Architecture Pattern: Feature-First + Clean Architecture
 
 **Why Feature-First?**
-- **Scalability**: Each feature (verse identification, quran reader, settings, donation) is self-contained
+- **Scalability**: Each feature (verse identification, quran reader, settings, subscription, ads, usage) is self-contained
 - **Solo developer efficiency**: Work on one feature at a time without touching others
 - **Clear ownership**: Easy to find all code related to a specific screen or user flow
 - **Phase 2 readiness**: New features (reciter identification, offline mode) can be added as new feature directories

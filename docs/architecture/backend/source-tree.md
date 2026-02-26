@@ -19,7 +19,8 @@ lawh/
 │   │   │   │   ├── search.py
 │   │   │   │   ├── feedback.py
 │   │   │   │   ├── quran.py
-│   │   │   │   ├── donations.py
+│   │   │   │   ├── webhooks.py
+│   │   │   │   ├── users.py
 │   │   │   │   └── health.py
 │   │   │   └── router.py
 │   │   ├── core/
@@ -30,7 +31,7 @@ lawh/
 │   │   │   ├── stt_service.py
 │   │   │   ├── matching_service.py
 │   │   │   ├── quran_service.py
-│   │   │   ├── stripe_service.py
+│   │   │   ├── usage_service.py
 │   │   │   └── geolocation_service.py
 │   │   ├── repositories/
 │   │   ├── models/
@@ -55,7 +56,9 @@ lawh/
 │   │   │   ├── results/
 │   │   │   ├── quran_reader/
 │   │   │   ├── feedback/
-│   │   │   ├── donation/
+│   │   │   ├── subscription/
+│   │   │   ├── ads/
+│   │   │   ├── usage/
 │   │   │   └── settings/
 │   │   ├── core/
 │   │   │   ├── api/
