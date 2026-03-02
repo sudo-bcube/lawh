@@ -1,0 +1,33 @@
+---
+import AppStoreButtons from './AppStoreButtons.astro';
+---
+
+<section id="download" class="py-16 md:py-24 bg-gradient-to-br from-primary to-primary-dark text-white">
+  <div class="max-w-6xl mx-auto px-4">
+    <div class="flex flex-col lg:flex-row items-center gap-12">
+      <div class="flex-1 text-center lg:text-left">
+        <h2 class="text-3xl md:text-4xl font-bold">
+          Download Lawh Today
+        </h2>
+
+        <p class="mt-4 text-lg text-white/80">
+          Available on iOS and Android. Start identifying Quran verses instantly.
+        </p>
+
+        <div class="mt-8">
+          <AppStoreButtons variant="light" />
+        </div>
+      </div>
+
+      <div class="flex-1 flex justify-center">
+        <div class="relative max-w-xs">
+          <img
+            src="/images/screenshots/app-screenshot-2.jpeg"
+            alt="Lawh app"
+            class="rounded-[2rem] shadow-2xl"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

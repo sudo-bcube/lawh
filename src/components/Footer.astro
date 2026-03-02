@@ -1,0 +1,26 @@
+---
+const contactEmail = import.meta.env.PUBLIC_CONTACT_EMAIL || 'hello@lawh.app';
+const currentYear = new Date().getFullYear();
+---
+
+<footer class="bg-text text-white py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+      <div class="flex flex-col items-center md:items-start gap-4">
+        <img src="/logos/logo-wordmark-white.svg" alt="Lawh" class="h-8" />
+        <p class="text-gray-400 text-sm">Instant Quran Verse Recognition</p>
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-6 text-sm">
+        <a href="/privacy" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
+        <a href="/terms" class="text-gray-400 hover:text-white transition-colors">Terms of Use</a>
+        <a href="/faq" class="text-gray-400 hover:text-white transition-colors">FAQ</a>
+        <a href={`mailto:${contactEmail}`} class="text-gray-400 hover:text-white transition-colors">{contactEmail}</a>
+      </div>
+    </div>
+
+    <div class="mt-8 pt-8 border-t border-gray-800 text-center text-gray-500 text-sm">
+      &copy; {currentYear} Lawh. All rights reserved.
+    </div>
+  </div>
+</footer>

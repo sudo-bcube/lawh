@@ -4,6 +4,7 @@
 # Legacy directories
 /lawh-frontend
 /lawh-backend
+/lawh-admin
 
 # BMAD directories
 /_bmad
@@ -11,3 +12,20 @@
 
 # Claude
 /.claude
+
+# Templates
+/web-template
+
+# Astro/Node
+node_modules/
+dist/
+.astro/
+
+# Environment
+.env
+.env.*
+.env.local
+.env.*.local
+
+# OS
+.DS_Store

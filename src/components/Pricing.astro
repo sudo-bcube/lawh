@@ -1,0 +1,79 @@
+---
+const plans = [
+  {
+    name: 'Free',
+    price: '$0',
+    period: '',
+    features: ['3 searches per day', 'Basic verse recognition', 'Ads supported'],
+    highlighted: false
+  },
+  {
+    name: 'Monthly',
+    price: '$1',
+    period: '/month',
+    features: ['Unlimited searches', 'Ad-free experience', 'All features included'],
+    highlighted: false
+  },
+  {
+    name: 'Yearly',
+    price: '$10',
+    period: '/year',
+    features: ['Unlimited searches', 'Ad-free experience', '2 months free'],
+    highlighted: true,
+    badge: 'Best Value'
+  }
+];
+
+const iosUrl = import.meta.env.PUBLIC_IOS_APP_URL || '#';
+---
+
+<section id="pricing" class="py-16 md:py-24 bg-background-alt">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-3xl md:text-4xl font-bold text-text text-center">
+      Choose Your Plan
+    </h2>
+
+    <p class="mt-4 text-text-muted text-center max-w-2xl mx-auto">
+      Start free, upgrade when you're ready. Every plan gives you instant verse recognition.
+    </p>
+
+    <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+      {plans.map(plan => (
+        <div class={`relative bg-white p-8 rounded-2xl ${plan.highlighted ? 'ring-2 ring-primary shadow-lg' : 'shadow-sm'}`}>
+          {plan.badge && (
+            <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-sm font-medium px-4 py-1 rounded-full">
+              {plan.badge}
+            </span>
+          )}
+
+          <h3 class="text-xl font-semibold text-text">{plan.name}</h3>
+
+          <div class="mt-4">
+            <span class="text-4xl font-bold text-text">{plan.price}</span>
+            <span class="text-text-muted">{plan.period}</span>
+          </div>
+
+          <ul class="mt-6 space-y-3">
+            {plan.features.map(feature => (
+              <li class="flex items-center gap-3 text-text-muted">
+                <svg class="w-5 h-5 text-primary flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                {feature}
+              </li>
+            ))}
+          </ul>
+
+          <a href={iosUrl} target="_blank" rel="noopener noreferrer"
+             class={`mt-8 block w-full py-3 rounded-xl text-center font-medium transition-colors ${
+               plan.highlighted
+                 ? 'bg-primary text-white hover:bg-primary-dark'
+                 : 'bg-gray-100 text-text hover:bg-gray-200'
+             }`}>
+            Get Started
+          </a>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
