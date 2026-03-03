@@ -1,0 +1,68 @@
+---
+import AppStoreButtons from './AppStoreButtons.astro';
+---
+
+<section id="home" class="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 -z-10"></div>
+
+  <div class="max-w-6xl mx-auto px-4">
+    <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+      <div class="flex-1 text-center lg:text-left">
+        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-text leading-tight">
+          Be in sync with moments that move your faith.
+        </h1>
+
+        <p class="mt-6 text-lg md:text-xl text-text-muted max-w-xl mx-auto lg:mx-0">
+          Feel focused, connected, and fully present with every Quran verse without distraction or friction.
+        </p>
+
+        <p class="mt-4 text-sm text-primary font-medium">
+          *All recitations recognized, whatever the style.
+        </p>
+
+        <div class="mt-8">
+          <AppStoreButtons />
+        </div>
+      </div>
+
+      <div class="flex-1 relative">
+        <div class="relative max-w-sm mx-auto">
+          <div class="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-[3rem] blur-3xl -z-10"></div>
+          <div class="relative">
+            <img
+              src="/images/screenshots/app-screenshot-1.jpeg"
+              alt="Lawh app home screen"
+              class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-1"
+            />
+            <img
+              src="/images/screenshots/app-screenshot-2.jpeg"
+              alt="Lawh app recording in progress"
+              class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-2 absolute inset-0"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero-image {
+    animation: fadeInOut 6s infinite;
+  }
+
+  .hero-image-1 {
+    animation-delay: 0s;
+  }
+
+  .hero-image-2 {
+    animation-delay: 3s;
+    opacity: 0;
+  }
+
+  @keyframes fadeInOut {
+    0%, 40% { opacity: 1; }
+    50%, 90% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+</style>

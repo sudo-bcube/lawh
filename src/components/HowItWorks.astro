@@ -1,0 +1,49 @@
+---
+const steps = [
+  {
+    number: 1,
+    title: 'Hear a verse',
+    description: 'During recitation, lectures, or daily reflection.'
+  },
+  {
+    number: 2,
+    title: 'Lawh it',
+    description: 'Tap to record and instantly recognize the verse.'
+  },
+  {
+    number: 3,
+    title: 'See the verse',
+    description: 'Arabic text, transliteration, and translation appear instantly.'
+  },
+  {
+    number: 4,
+    title: 'Reflect or share',
+    description: 'Pause to understand, save it, or share with loved ones.'
+  },
+  {
+    number: 5,
+    title: 'Stay in sync',
+    description: 'Follow the recitation naturally, building a habit of presence and reflection.'
+  }
+];
+---
+
+<section id="how-it-works" class="py-16 md:py-24 bg-white">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-3xl md:text-4xl font-bold text-text text-center">
+      Stay in sync with every verse
+    </h2>
+
+    <div class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {steps.map((step) => (
+        <div class="flex flex-col items-center text-center p-6">
+          <div class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center font-bold text-lg">
+            {step.number}
+          </div>
+          <h3 class="mt-4 text-xl font-semibold text-text">{step.title}</h3>
+          <p class="mt-2 text-text-muted">{step.description}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
