@@ -28,13 +28,41 @@ import AppStoreButtons from './AppStoreButtons.astro';
       <div class="flex-1 relative">
         <div class="relative max-w-sm mx-auto">
           <div class="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-[3rem] blur-3xl -z-10"></div>
-          <img
-            src="/images/screenshots/app-screenshot-1.jpeg"
-            alt="Lawh app showing Quran verse recognition"
-            class="rounded-[2rem] shadow-2xl w-full"
-          />
+          <div class="relative">
+            <img
+              src="/images/screenshots/app-screenshot-1.jpeg"
+              alt="Lawh app home screen"
+              class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-1"
+            />
+            <img
+              src="/images/screenshots/app-screenshot-2.jpeg"
+              alt="Lawh app recording in progress"
+              class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-2 absolute inset-0"
+            />
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
+
+<style>
+  .hero-image {
+    animation: fadeInOut 6s infinite;
+  }
+
+  .hero-image-1 {
+    animation-delay: 0s;
+  }
+
+  .hero-image-2 {
+    animation-delay: 3s;
+    opacity: 0;
+  }
+
+  @keyframes fadeInOut {
+    0%, 40% { opacity: 1; }
+    50%, 90% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+</style>
