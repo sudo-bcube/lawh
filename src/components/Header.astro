@@ -16,7 +16,7 @@ const navLinks = [
     <ul class="hidden md:flex items-center gap-8 list-none">
       {navLinks.map(link => (
         <li>
-          <a href={link.href} class="text-text-muted hover:text-primary transition-colors no-underline">
+          <a href={link.href} data-nav-link={link.href.slice(1)} class="nav-link text-text-muted hover:text-primary transition-colors no-underline">
             {link.label}
           </a>
         </li>
@@ -34,7 +34,7 @@ const navLinks = [
     <ul class="px-4 py-4 space-y-4 list-none">
       {navLinks.map(link => (
         <li>
-          <a href={link.href} class="block text-text-muted hover:text-primary transition-colors no-underline">
+          <a href={link.href} data-nav-link={link.href.slice(1)} class="nav-link block text-text-muted hover:text-primary transition-colors no-underline">
             {link.label}
           </a>
         </li>
@@ -42,6 +42,13 @@ const navLinks = [
     </ul>
   </div>
 </header>
+
+<style>
+  .nav-link.active {
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+</style>
 
 <script>
   const btn = document.getElementById('mobile-menu-btn');
@@ -55,4 +62,20 @@ const navLinks = [
       menu?.classList.add('hidden');
     });
   });
+
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('[data-nav-link]');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => link.classList.remove('active'));
+        document.querySelectorAll(`[data-nav-link="${entry.target.id}"]`).forEach(link => {
+          link.classList.add('active');
+        });
+      }
+    });
+  }, { rootMargin: '-50% 0px -50% 0px' });
+
+  sections.forEach(section => observer.observe(section));
 </script>
