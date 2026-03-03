@@ -1,30 +1,34 @@
 ---
+const dailyLimit = import.meta.env.PUBLIC_FREE_DAILY_LIMIT || '3';
+const monthlyLimit = import.meta.env.PUBLIC_FREE_MONTHLY_LIMIT || '30';
+const monthlyPrice = import.meta.env.PUBLIC_MONTHLY_PRICE || '1';
+const yearlyPrice = import.meta.env.PUBLIC_YEARLY_PRICE || '10';
+const iosUrl = import.meta.env.PUBLIC_IOS_APP_URL || '#';
+
 const plans = [
   {
     name: 'Free',
     price: '$0',
     period: '',
-    features: ['3 searches per day', 'Basic verse recognition', 'Ads supported'],
+    features: [`${dailyLimit} searches per day`, `${monthlyLimit} searches per month`, 'Ads supported'],
     highlighted: false
   },
   {
     name: 'Monthly',
-    price: '$1',
+    price: `$${monthlyPrice}`,
     period: '/month',
     features: ['Unlimited searches', 'Ad-free experience', 'All features included'],
     highlighted: false
   },
   {
     name: 'Yearly',
-    price: '$10',
+    price: `$${yearlyPrice}`,
     period: '/year',
     features: ['Unlimited searches', 'Ad-free experience', '2 months free'],
     highlighted: true,
     badge: 'Best Value'
   }
 ];
-
-const iosUrl = import.meta.env.PUBLIC_IOS_APP_URL || '#';
 ---
 
 <section id="pricing" class="py-16 md:py-24 bg-background-alt">
