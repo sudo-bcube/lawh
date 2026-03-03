@@ -13,19 +13,15 @@ const navLinks = [
       <img src="/logos/logo-full-horizontal.svg" alt="Lawh" class="h-8" />
     </a>
 
-    <ul class="hidden md:flex items-center gap-8">
+    <ul class="hidden md:flex items-center gap-8 list-none">
       {navLinks.map(link => (
         <li>
-          <a href={link.href} class="text-text-muted hover:text-primary transition-colors">
+          <a href={link.href} class="text-text-muted hover:text-primary transition-colors no-underline">
             {link.label}
           </a>
         </li>
       ))}
     </ul>
-
-    <a href="#download" class="hidden md:inline-flex px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium">
-      Download App
-    </a>
 
     <button id="mobile-menu-btn" class="md:hidden p-2 text-text" aria-label="Toggle menu">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -35,19 +31,14 @@ const navLinks = [
   </nav>
 
   <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100">
-    <ul class="px-4 py-4 space-y-4">
+    <ul class="px-4 py-4 space-y-4 list-none">
       {navLinks.map(link => (
         <li>
-          <a href={link.href} class="block text-text-muted hover:text-primary transition-colors">
+          <a href={link.href} class="block text-text-muted hover:text-primary transition-colors no-underline">
             {link.label}
           </a>
         </li>
       ))}
-      <li>
-        <a href="#download" class="block px-5 py-2 bg-primary text-white rounded-lg text-center font-medium">
-          Download App
-        </a>
-      </li>
     </ul>
   </div>
 </header>
