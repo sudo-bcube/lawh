@@ -20,7 +20,7 @@
 node_modules/
 dist/
 .astro/
-screenshots/
+/screenshots/
 
 # Environment
 .env
