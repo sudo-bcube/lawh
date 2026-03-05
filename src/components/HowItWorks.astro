@@ -37,11 +37,11 @@ const steps = [
             <span class="absolute -top-3 -right-3 w-8 h-8 bg-[#b8a080] text-white rounded-full flex items-center justify-center font-bold text-sm z-10">
               {step.number}
             </span>
-            <div class="w-48 h-48 bg-white rounded-2xl shadow-sm overflow-hidden flex items-center justify-center">
+            <div class="w-48 bg-white rounded-2xl shadow-sm overflow-hidden">
               <img
                 src={step.image}
                 alt={step.title}
-                class="w-full h-full object-cover"
+                class="w-full h-auto object-contain"
               />
             </div>
           </div>
