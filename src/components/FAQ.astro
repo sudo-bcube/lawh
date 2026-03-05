@@ -1,0 +1,48 @@
+---
+const faqs = [
+  {
+    question: 'What is Lawh exactly?',
+    answer: "Lawh is an instant Quran audio recognition app designed to make reflection effortless. Each verse is recognized instantly, displayed in Arabic, transliteration, and translation, and works across all 7 recitation styles."
+  },
+  {
+    question: 'How do I get access?',
+    answer: "Just download or open the app. It's fully available to everyone."
+  },
+  {
+    question: 'Is there a free version?',
+    answer: "Yes! The free plan gives you 3 searches per day. Upgrade to remove ads and unlock unlimited searches."
+  },
+  {
+    question: 'Do I need to worry about recitation style or dialect?',
+    answer: "Not at all. Lawh recognizes all 7 Quranic recitation dialects, so intonation or tribal variation never gets in the way of your reflection."
+  },
+  {
+    question: 'Can I give feedback or help shape it?',
+    answer: "Absolutely. Feedback is optional. You can quietly explore, or share thoughts and suggestions. We read every message."
+  }
+];
+---
+
+<section id="faq" class="py-16 md:py-24 bg-white">
+  <div class="max-w-3xl mx-auto px-4">
+    <h2 class="text-3xl md:text-4xl font-bold text-text text-center">
+      Your guide to using Lawh with ease
+    </h2>
+
+    <div class="mt-12 space-y-4">
+      {faqs.map((faq, index) => (
+        <details class="group bg-background rounded-xl">
+          <summary class="flex items-center justify-between p-6 cursor-pointer list-none">
+            <span class="font-medium text-text">{faq.question}</span>
+            <svg class="w-5 h-5 text-text-muted transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="px-6 pb-6 text-text-muted">
+            {faq.answer}
+          </div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>

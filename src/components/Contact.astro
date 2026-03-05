@@ -1,0 +1,29 @@
+---
+const contactEmail = import.meta.env.PUBLIC_CONTACT_EMAIL || 'hello@lawh.app';
+---
+
+<section class="py-16 md:py-24 bg-background-alt">
+  <div class="max-w-3xl mx-auto px-4 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold text-text">
+      Sharing your moments of faith and more
+    </h2>
+
+    <div class="mt-6 text-lg text-text-muted space-y-4">
+      <p>
+        Have a question, a reflection, or a verse that moved you? Share it with us. We love hearing how Lawh fits into your moments of faith.
+      </p>
+
+      <p>
+        Whether it's feedback, a suggestion, or even ideas for collaboration, drop us a message and we'll get back to you within 48 hours.
+      </p>
+    </div>
+
+    <a href={`mailto:${contactEmail}`}
+       class="mt-8 inline-flex items-center gap-2 px-8 py-4 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors font-medium no-underline">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+      {contactEmail}
+    </a>
+  </div>
+</section>
