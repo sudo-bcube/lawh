@@ -1,8 +1,8 @@
 ---
-const iosUrl = import.meta.env.PUBLIC_IOS_APP_URL || '#';
+import AppStoreButtons from './AppStoreButtons.astro';
 ---
 
-<section id="home" class="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden bg-[#1a1a2e]">
+<section id="home" class="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden bg-primary-dark">
   <div class="max-w-6xl mx-auto px-4">
     <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
       <div class="flex-1 text-center lg:text-left">
@@ -14,15 +14,8 @@ const iosUrl = import.meta.env.PUBLIC_IOS_APP_URL || '#';
           Instantly recognize any Qur'an recitation and follow it without losing your place.
         </p>
 
-        <div class="mt-8 flex flex-wrap gap-4 justify-center lg:justify-start">
-          <a href={iosUrl} target="_blank" rel="noopener noreferrer"
-             class="px-8 py-3 bg-[#4361ee] text-white rounded-lg font-medium hover:bg-[#3651d4] transition-colors no-underline">
-            Order Now
-          </a>
-          <a href="#features"
-             class="px-8 py-3 border border-white/30 text-white rounded-lg font-medium hover:bg-white/10 transition-colors no-underline">
-            Learn More
-          </a>
+        <div class="mt-8">
+          <AppStoreButtons variant="light" />
         </div>
       </div>
 
@@ -31,9 +24,19 @@ const iosUrl = import.meta.env.PUBLIC_IOS_APP_URL || '#';
           <div class="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-[3rem] blur-3xl -z-10"></div>
           <div class="relative">
             <img
+              src="/images/screenshots/app-screenshot-1.jpeg"
+              alt="Lawh app home screen"
+              class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-1"
+            />
+            <img
+              src="/images/screenshots/app-screenshot-2.jpeg"
+              alt="Lawh app recording in progress"
+              class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-2 absolute inset-0"
+            />
+            <img
               src="/images/screenshots/app-screenshot-4.png"
-              alt="Lawh app showing Ayatul Kursi with Arabic text, transliteration, and translation"
-              class="rounded-[2rem] shadow-2xl w-full"
+              alt="Lawh app showing verse result with Arabic text, transliteration, and translation"
+              class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-3 absolute inset-0"
             />
           </div>
         </div>
@@ -41,3 +44,28 @@ const iosUrl = import.meta.env.PUBLIC_IOS_APP_URL || '#';
     </div>
   </div>
 </section>
+
+<style>
+  .hero-image {
+    animation: fadeThree 9s infinite;
+    opacity: 0;
+  }
+
+  .hero-image-1 {
+    animation-delay: 0s;
+  }
+
+  .hero-image-2 {
+    animation-delay: 3s;
+  }
+
+  .hero-image-3 {
+    animation-delay: 6s;
+  }
+
+  @keyframes fadeThree {
+    0%, 5% { opacity: 0; }
+    10%, 28% { opacity: 1; }
+    33%, 100% { opacity: 0; }
+  }
+</style>
