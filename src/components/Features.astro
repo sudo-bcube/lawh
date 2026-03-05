@@ -1,59 +1,57 @@
 ---
 const features = [
   {
-    icon: 'mic',
-    title: 'Instant recognition',
-    description: 'Record any Quran verse and see instant Arabic text, transliteration, and translation, no matter the recitation style.'
+    icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" /><circle cx="18" cy="5" r="3" fill="#0D7377" stroke="none" /></svg>`,
+    title: 'Instant Recognition',
+    description: 'Connect with verses instantly.'
   },
   {
-    icon: 'waveform',
+    icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`,
     title: 'Real-time flow',
-    description: "Follow recitations naturally. Intonation, dialect, or tribal variation won't get in the way."
+    description: 'Follow recitations as they happen.'
   },
   {
-    icon: 'search',
+    icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>`,
     title: 'Effortless search',
-    description: 'Find any verse or surah quickly, even if you only remember part of it.'
+    description: 'Find any Surah or verse with a tap.'
   },
   {
-    icon: 'share',
+    icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" /></svg>`,
     title: 'Read and share',
-    description: "Explore the Qur'an at your own pace, or share meaningful verses with loved ones."
+    description: 'Access beautiful text and inspire others.'
   },
   {
-    icon: 'heart',
+    icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>`,
     title: 'Stay present',
-    description: 'Every interaction keeps you in sync with your recitation so you can reflect, focus, and feel the words fully.'
+    description: 'Minimize distractions and focus on the meaning.'
   }
 ];
-
-const iconPaths: Record<string, string> = {
-  mic: 'M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z',
-  waveform: 'M3 12h2v4H3v-4zm4-6h2v16H7V6zm4 3h2v10h-2V9zm4-3h2v16h-2V6zm4 6h2v4h-2v-4z',
-  search: 'M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
-  share: 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z',
-  heart: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'
-};
 ---
 
 <section id="features" class="py-16 md:py-24 bg-background-alt">
-  <div class="max-w-6xl mx-auto px-4">
+  <div class="max-w-4xl mx-auto px-4">
     <h2 class="text-3xl md:text-4xl font-bold text-text text-center">
-      Helping your Iman grow in more ways than one
+      Helping your Iman grow in<br />more ways than one.
     </h2>
 
-    <div class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {features.map((feature, index) => (
-        <div class="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-          <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d={iconPaths[feature.icon]} />
-            </svg>
+    <div class="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-8">
+      {features.slice(0, 4).map(feature => (
+        <div class="flex flex-col items-center text-center p-6 border-b border-gray-200">
+          <div class="text-text/70">
+            <Fragment set:html={feature.icon} />
           </div>
-          <h3 class="mt-5 text-xl font-semibold text-text">{feature.title}</h3>
-          <p class="mt-3 text-text-muted">{feature.description}</p>
+          <h3 class="mt-3 text-lg font-semibold text-text">{feature.title}</h3>
+          <p class="mt-1 text-sm text-text-muted">{feature.description}</p>
         </div>
       ))}
+    </div>
+
+    <div class="mt-8 flex flex-col items-center text-center p-6">
+      <div class="text-text/70">
+        <Fragment set:html={features[4].icon} />
+      </div>
+      <h3 class="mt-3 text-lg font-semibold text-text">{features[4].title}</h3>
+      <p class="mt-1 text-sm text-text-muted">{features[4].description}</p>
     </div>
   </div>
 </section>

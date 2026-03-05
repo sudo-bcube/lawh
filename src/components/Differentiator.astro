@@ -1,25 +1,30 @@
 ---
-import AppStoreButtons from './AppStoreButtons.astro';
+const iosUrl = import.meta.env.PUBLIC_IOS_APP_URL || '#';
 ---
 
-<section class="py-16 md:py-24 bg-white">
+<section class="py-20 md:py-28 bg-[#1a1a2e]">
   <div class="max-w-4xl mx-auto px-4 text-center">
-    <h2 class="text-3xl md:text-4xl font-bold text-text">
-      The Quran comes first
+    <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white">
+      The Qur'an comes first.
     </h2>
 
-    <div class="mt-8 text-lg text-text-muted space-y-6 max-w-3xl mx-auto">
-      <p>
-        Many Qur'an apps overload you with menus and features you never asked for. Glitches make navigation unreliable, and intrusive notifications or ads can pull you out of the moment.
-      </p>
+    <p class="mt-6 text-lg md:text-xl text-white/70 max-w-2xl mx-auto">
+      Lawh exists for one reason: to help you stay connected to it.
+    </p>
 
-      <p>
-        Lawh keeps it simple, respectful, and focused. One app with one purpose: helping you experience the Qur'an fully, every time you open it.
-      </p>
-    </div>
+    <p class="mt-2 text-white/50">
+      Free to begin. Premium when you're ready.
+    </p>
 
-    <div class="mt-10 flex justify-center">
-      <AppStoreButtons />
+    <div class="mt-10 flex flex-wrap gap-4 justify-center">
+      <a href={iosUrl} target="_blank" rel="noopener noreferrer"
+         class="px-8 py-3 bg-white text-[#1a1a2e] rounded-lg font-medium hover:bg-white/90 transition-colors no-underline">
+        Get Started
+      </a>
+      <a href="#features"
+         class="px-8 py-3 border border-white/30 text-white rounded-lg font-medium hover:bg-white/10 transition-colors no-underline">
+        Learn More
+      </a>
     </div>
   </div>
 </section>
