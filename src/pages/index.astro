@@ -27,4 +27,45 @@ import Footer from '../components/Footer.astro';
     <Contact />
   </main>
   <Footer />
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is Lawh exactly?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Lawh is an instant Quran audio recognition app designed to make reflection effortless. Each verse is recognized instantly, displayed in Arabic, transliteration, and translation, and works across all 7 recitation styles." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is there a Shazam for Quran?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes — Lawh works like Shazam but for Quran recitations. Just tap to record any Quran audio and Lawh instantly identifies the verse, showing you the Arabic text, transliteration, and English translation." }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I identify a Quran verse I'm hearing?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Open the Lawh app and tap the record button while the Quran is being recited. Lawh uses audio recognition to instantly identify the exact verse, surah, and ayah number." }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Lawh provide Quran translation and transliteration?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. Every recognized verse is displayed with the original Arabic text, a phonetic transliteration, and an English translation so you can follow along and understand the meaning." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Lawh free to use?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. Lawh offers a free version with 3 searches per day. For unlimited access and additional features, you can upgrade to Premium." }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Lawh work with different Quran recitation styles?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. Lawh recognizes all 7 Quranic recitation styles (qira'at), so it works regardless of the reciter's dialect or intonation." }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use Lawh during Taraweeh and Ramadan prayers?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. Lawh is designed for moments like Taraweeh and Tahajjud prayers during Ramadan, helping you follow along with the imam's recitation in real time." }
+      }
+    ]
+  })} />
 </BaseLayout>

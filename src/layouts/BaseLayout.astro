@@ -4,10 +4,15 @@ interface Props {
   description?: string;
 }
 
+const siteUrl = Astro.site?.origin || 'https://lawh.bcube.tech';
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
+
 const {
-  title = "Lawh - Instant Quran Verse Recognition",
-  description = "Be in sync with moments that move your faith. Identify any Quran verse instantly with Lawh."
+  title = "Lawh - Shazam for Quran | Instant Quran Verse Recognition & Translation",
+  description = "Identify any Quran verse instantly with Lawh. Like Shazam for Quran — hear a recitation, tap to recognize, and get Arabic text, transliteration, and English translation. Works with all 7 recitation styles. Free Quran recognition app."
 } = Astro.props;
+
+const ogImage = `${siteUrl}/images/screenshots/app-screenshot-4.png`;
 ---
 
 <!doctype html>
@@ -16,16 +21,45 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <meta name="keywords" content="Quran, Quran app, Shazam for Quran, Quran verse recognition, Quran translation, Quran transliteration, identify Quran verse, Quran recitation, Quran audio recognition, lawh al mahfuz, Islamic app, Quran search, Taraweeh, Ramadan, Quran memorization, Quran identifier" />
+    <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="/og-image.svg" />
+    <meta property="og:image" content={ogImage} />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="Lawh" />
+    <meta property="og:locale" content="en_US" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <meta name="application-name" content="Lawh" />
+    <meta name="apple-mobile-web-app-title" content="Lawh" />
     <title>{title}</title>
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Lawh",
+      "description": "Instant Quran verse recognition app. Like Shazam for Quran — hear a recitation, tap to recognize, and get Arabic text, transliteration, and translation.",
+      "applicationCategory": "ReligionApplication",
+      "operatingSystem": "iOS, Android",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "url": siteUrl,
+      "image": ogImage,
+      "author": {
+        "@type": "Organization",
+        "name": "Lawh"
+      }
+    })} />
   </head>
   <body class="bg-background text-text font-sans antialiased">
     <slot />
