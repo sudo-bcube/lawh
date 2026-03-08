@@ -24,19 +24,24 @@ import AppStoreButtons from './AppStoreButtons.astro';
           <div class="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-[3rem] blur-3xl -z-10"></div>
           <div class="relative">
             <img
-              src="/images/screenshots/app-screenshot-1.jpeg"
+              src="/images/screenshots/app-screenshot-1.png"
               alt="Lawh app home screen"
               class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-1"
             />
             <img
-              src="/images/screenshots/app-screenshot-2.jpeg"
+              src="/images/screenshots/app-screenshot-2.png"
               alt="Lawh app recording in progress"
               class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-2 absolute inset-0"
             />
             <img
-              src="/images/screenshots/app-screenshot-4.png"
-              alt="Lawh app showing verse result with Arabic text, transliteration, and translation"
+              src="/images/screenshots/app-screenshot-3.png"
+              alt="Lawh app showing identified verse result"
               class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-3 absolute inset-0"
+            />
+            <img
+              src="/images/screenshots/app-screenshot-4.png"
+              alt="Lawh app showing full chapter with Arabic text, transliteration, and translation"
+              class="rounded-[2rem] shadow-2xl w-full hero-image hero-image-4 absolute inset-0"
             />
           </div>
         </div>
@@ -47,7 +52,7 @@ import AppStoreButtons from './AppStoreButtons.astro';
 
 <style>
   .hero-image {
-    animation: fadeThree 9s infinite;
+    animation: fadeFour 12s infinite;
     opacity: 0;
   }
 
@@ -63,9 +68,13 @@ import AppStoreButtons from './AppStoreButtons.astro';
     animation-delay: 6s;
   }
 
-  @keyframes fadeThree {
-    0%, 5% { opacity: 0; }
-    10%, 28% { opacity: 1; }
-    33%, 100% { opacity: 0; }
+  .hero-image-4 {
+    animation-delay: 9s;
+  }
+
+  @keyframes fadeFour {
+    0%, 4% { opacity: 0; }
+    8%, 21% { opacity: 1; }
+    25%, 100% { opacity: 0; }
   }
 </style>
