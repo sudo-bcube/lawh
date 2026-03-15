@@ -1,12 +1,3 @@
-# Privacy Policy
-
-**Lawh - Quran Verse Identification App**
-
-**Effective Date:** February 26, 2026
-**Last Updated:** February 26, 2026
-
----
-
 ## 1. Introduction
 
 Welcome to Lawh ("the App," "we," "us," or "our"). We are committed to protecting your privacy and being transparent about our data practices. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.
@@ -34,7 +25,7 @@ Lawh is built with privacy as a core principle:
 When you use the App, we automatically collect:
 
 **Device Information:**
-- Device unique identifier (UUID) - a random identifier generated for your device, not linked to your personal identity
+- Device unique identifier (UUID) — a randomly generated identifier assigned to your installation of the App. This identifier is not linked to your name, email, or other personal identity and is used solely to enable core functionality such as search history, subscription management, and analytics. This identifier may reset if the App is reinstalled or if device settings are reset.
 - Device type (iOS or Android)
 - App version
 
@@ -53,7 +44,7 @@ When you use our services, you may provide:
 
 **Audio Recordings:**
 - Voice recordings of Quranic recitations that you submit for verse identification
-- These recordings are processed to extract text and are not stored permanently
+- These recordings are transmitted securely to our processing infrastructure and analyzed to identify the Quranic verse being recited. Audio recordings are processed temporarily for the purpose of verse identification and are not permanently stored by Lawh after processing is completed. Lawh does not use submitted audio recordings to train artificial intelligence or machine learning models.
 
 **Feedback Data:**
 - Thumbs up/down ratings on search results
@@ -134,7 +125,7 @@ We work with trusted third-party service providers who assist in operating our A
 
 | Provider | Purpose | Data Shared |
 |----------|---------|-------------|
-| Google Cloud | Voice recognition and transcription | Audio recordings (processed, not stored) |
+| Google Cloud | Voice recognition and transcription | Audio recordings transmitted temporarily for transcription and verse identification processing. Recordings are not retained by Lawh after processing is complete. Processing is governed by Google Cloud's data protection and security standards. |
 | Firebase | Push notifications | Device tokens, notification preferences |
 | RevenueCat | Subscription management | Device ID, subscription status |
 | Google AdMob | Advertisement delivery (free tier) | Device ID, ad interaction data |
@@ -191,6 +182,8 @@ We implement appropriate technical and organizational measures to protect your d
 
 While we strive to protect your information, no method of transmission or storage is 100% secure. We cannot guarantee absolute security.
 
+In the event of a data breach that affects your personal data, we will notify affected users and relevant authorities as required by applicable data protection laws.
+
 ---
 
 ## 7. Your Privacy Rights
@@ -208,8 +201,8 @@ Depending on your location, you may have the following rights:
 
 ### 7.3 Deletion
 
-- Request deletion of your data
-- To delete your data, uninstall the App or contact us at support@lawh.app
+- To delete your data, uninstall the App or contact us at {{CONTACT_EMAIL}}
+- Uninstalling the App will stop further data collection but may not immediately remove data already stored on our servers. Upon request, we will delete or anonymize associated data within a reasonable timeframe unless retention is required by law.
 
 ### 7.4 Opt-Out
 
@@ -225,7 +218,7 @@ Depending on your location, you may have the following rights:
 ### 7.6 Exercise Your Rights
 
 To exercise any of these rights, contact us at:
-- **Email:** support@lawh.app
+- **Email:** {{CONTACT_EMAIL}}
 
 We will respond to your request within 30 days.
 
@@ -235,7 +228,7 @@ We will respond to your request within 30 days.
 
 ### 8.1 Age Requirements
 
-Lawh is designed to be suitable for users of all ages (5+), including children. We are committed to protecting children's privacy.
+Lawh is designed to be suitable for a general audience, including younger users. We do not knowingly collect personal information such as names, email addresses, or contact information from children.
 
 ### 8.2 Data Collection for Children
 
@@ -250,7 +243,9 @@ We recommend that children under 18 use the App under parental or guardian super
 
 ### 8.4 Parental Rights
 
-If you are a parent or guardian and have concerns about your child's use of the App, please contact us at support@lawh.app.
+If you are a parent or guardian and have concerns about your child's use of the App, please contact us at {{CONTACT_EMAIL}}.
+
+If we become aware that personal information has been collected from a child in violation of applicable law, we will take reasonable steps to delete such information.
 
 ---
 
@@ -266,6 +261,8 @@ When we transfer data internationally, we ensure appropriate safeguards are in p
 - Standard contractual clauses
 - Data protection agreements with service providers
 - Compliance with applicable data protection laws
+
+Depending on your region, advertisements may be shown in non-personalized form by default unless you have granted permission for personalized advertising.
 
 ---
 
@@ -321,7 +318,9 @@ As a mobile application, Lawh does not use traditional web cookies. However, we 
 
 ### 12.2 Website
 
-Our website (lawh.app) may use cookies for analytics and functionality. Cookie preferences can be managed through your browser settings.
+Our website may use cookies for analytics and functionality. Cookie preferences can be managed through your browser settings.
+
+Lawh does not perform cross-app tracking of users across unrelated applications or websites.
 
 ---
 
@@ -342,18 +341,21 @@ If you are in the EEA, you have additional rights under the General Data Protect
 - Right to restrict processing
 
 **Data Protection Contact:**
-Email: support@lawh.app
+Email: {{CONTACT_EMAIL}}
 
 ### 13.2 California Residents (CCPA)
 
 If you are a California resident, you have rights under the California Consumer Privacy Act:
 
-**Right to Know:** Request information about data collection and sharing
-**Right to Delete:** Request deletion of your personal information
-**Right to Opt-Out:** We do not sell personal information
-**Right to Non-Discrimination:** We will not discriminate against you for exercising your rights
+**Right to Know:** Request information about data collection and sharing.
 
-To exercise CCPA rights, contact: support@lawh.app
+**Right to Delete:** Request deletion of your personal information.
+
+**Right to Opt-Out:** We do not sell personal information.
+
+**Right to Non-Discrimination:** We will not discriminate against you for exercising your privacy rights.
+
+To exercise CCPA rights, contact: {{CONTACT_EMAIL}}
 
 ### 13.3 Other Regions
 
@@ -396,9 +398,7 @@ Your continued use of the App after changes constitutes acceptance of the update
 
 If you have questions, concerns, or requests regarding this Privacy Policy, please contact us:
 
-**Lawh**
-Email: support@lawh.app
-Website: https://lawh.app
+Data Protection Contact: {{CONTACT_EMAIL}}
 
 We aim to respond to all inquiries within 30 days.
 

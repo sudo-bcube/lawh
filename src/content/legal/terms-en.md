@@ -1,15 +1,9 @@
-# Terms of Use
-
-**Lawh - Quran Verse Identification App**
-
-**Effective Date:** February 26, 2026
-**Last Updated:** February 26, 2026
-
----
-
 ## 1. Introduction and Acceptance of Terms
 
 Welcome to Lawh ("the App," "we," "us," or "our"). Lawh is a mobile application designed to help users identify Quranic verses through audio recognition technology.
+
+**Operator Information**
+Lawh is operated by BCube Technologies LTD ("Company", "we", "us", or "our"), the developer and operator of the Lawh application.
 
 By downloading, installing, accessing, or using the Lawh application, you ("User," "you," or "your") acknowledge that you have read, understood, and agree to be bound by these Terms of Use ("Terms"). If you do not agree to these Terms, please do not use the App.
 
@@ -35,6 +29,12 @@ We strive to maintain continuous service availability but do not guarantee unint
 - Technical issues
 - Updates and improvements
 - Circumstances beyond our control
+
+### 2.3 Changes to Services
+
+We may modify, update, suspend, or discontinue any part of the App or its features at any time. This may include changes to search limits, subscription features, advertisement formats, or other functionality.
+
+We will make reasonable efforts to notify users of significant changes where appropriate.
 
 ---
 
@@ -193,6 +193,8 @@ When you provide feedback (thumbs up/down, corrections), this data may be used t
 
 Your data is handled in accordance with our Privacy Policy, which is incorporated into these Terms by reference.
 
+Users are solely responsible for any content they share through the App. BCube Technologies LTD is not responsible for how shared content is interpreted, redistributed, or used by third parties.
+
 ---
 
 ## 8. Third-Party Services
@@ -208,6 +210,10 @@ Your use of these third-party services is subject to their respective terms and 
 ### 8.3 External Links
 
 The App may contain links to external websites or resources. We do not control and are not responsible for the content, privacy policies, or practices of third-party sites.
+
+### 8.4 App Store Disclaimer
+
+Apple Inc. and Google LLC are not responsible for the App or its content. Any claims relating to the App must be directed solely to BCube Technologies LTD and not to Apple or Google.
 
 ---
 
@@ -229,6 +235,8 @@ We do not guarantee that:
 - Results will be error-free
 - The service will be uninterrupted
 
+Verse identification relies on automated algorithms and artificial intelligence technologies. These systems may produce inaccurate, incomplete, or incorrect results.
+
 ### 9.3 Religious Disclaimer
 
 The App is a technological tool to assist in Quranic study. It should not be considered a substitute for:
@@ -238,6 +246,10 @@ The App is a technological tool to assist in Quranic study. It should not be con
 - Traditional methods of Quran memorization
 
 Users should verify important religious matters with qualified Islamic scholars.
+
+### 9.4 Reliance on App Results
+
+The results provided by the App are intended for informational and educational purposes only. Users remain responsible for verifying important religious, academic, or personal matters through appropriate sources.
 
 ---
 
@@ -277,9 +289,7 @@ You may stop using the App at any time by:
 ### 12.2 By Us
 
 We may suspend or terminate your access to the App:
-- For violation of these Terms
-- For fraudulent or illegal activity
-- At our discretion, with or without notice
+- For violation of these Terms, suspected fraudulent or illegal activity, or for any other reason permitted by applicable law.
 
 ### 12.3 Effect of Termination
 
@@ -294,15 +304,15 @@ Upon termination:
 
 ### 13.1 Informal Resolution
 
-Before filing any legal claim, you agree to attempt to resolve disputes informally by contacting us at support@lawh.app. We will attempt to resolve disputes within 30 days.
+Before filing any legal claim, you agree to attempt to resolve disputes informally by contacting us at {{CONTACT_EMAIL}}. We will attempt to resolve disputes within 30 days.
 
 ### 13.2 Governing Law
 
-These Terms shall be governed by and construed in accordance with applicable laws, without regard to conflict of law principles.
+These Terms shall be governed by and construed in accordance with the laws of Nigeria, without regard to conflict of law principles.
 
 ### 13.3 Arbitration
 
-Any disputes that cannot be resolved informally shall be resolved through binding arbitration, except where prohibited by law. You agree to waive your right to participate in class actions or class arbitrations.
+Any disputes that cannot be resolved informally shall be resolved through binding arbitration conducted in accordance with UNCITRAL Arbitration Rules, with proceedings conducted in the English language, except where prohibited by law. You agree to waive your right to participate in class actions or class arbitrations.
 
 ### 13.4 Exceptions
 
@@ -336,8 +346,12 @@ We shall not be liable for any failure to perform due to causes beyond our reaso
 
 We may provide notices to you through the App, push notifications, or other reasonable means. You may contact us at:
 
-**Email:** support@lawh.app
-**Website:** https://lawh.app
+**Email:** {{CONTACT_EMAIL}}
+**Website:** {{SITE_URL}}
+
+### 14.7 Export Compliance
+
+You agree to comply with all applicable export control and trade sanction laws and regulations. You may not use the App if you are located in a country subject to applicable sanctions or if you are listed on any government prohibited or restricted parties list.
 
 ---
 
@@ -357,8 +371,8 @@ Your continued use of the App after changes constitutes acceptance of the modifi
 If you have questions about these Terms of Use, please contact us:
 
 **Lawh**
-Email: support@lawh.app
-Website: https://lawh.app
+Email: {{CONTACT_EMAIL}}
+Website: {{SITE_URL}}
 
 ---
 

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   --color-primary: #0D7377;
@@ -18,5 +19,88 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .legal-prose {
+    --tw-prose-headings: var(--color-primary-dark);
+    --tw-prose-links: var(--color-primary);
+    --tw-prose-bold: var(--color-text);
+  }
+
+  .legal-prose :where(h2):not(:where([class~="not-prose"] *)) {
+    color: var(--color-primary-dark);
+    font-weight: 700;
+    border-bottom: 2px solid var(--color-background-alt);
+    padding-bottom: 0.5rem;
+    margin-top: 2.5rem;
+  }
+
+  .legal-prose :where(h3):not(:where([class~="not-prose"] *)) {
+    color: var(--color-primary-dark);
+    font-weight: 600;
+  }
+
+  .legal-prose :where(a):not(:where([class~="not-prose"] *)) {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--color-primary-light);
+    text-underline-offset: 2px;
+    transition: color 0.2s;
+  }
+
+  .legal-prose :where(a):not(:where([class~="not-prose"] *)):hover {
+    color: var(--color-primary-dark);
+  }
+
+  .legal-prose :where(table):not(:where([class~="not-prose"] *)) {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    font-size: 0.875rem;
+  }
+
+  .legal-prose :where(thead):not(:where([class~="not-prose"] *)) {
+    background-color: var(--color-background-alt);
+  }
+
+  .legal-prose :where(th):not(:where([class~="not-prose"] *)) {
+    color: var(--color-primary-dark);
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+  }
+
+  .legal-prose :where(td):not(:where([class~="not-prose"] *)) {
+    padding: 0.75rem 1rem;
+  }
+
+  .legal-prose :where(tbody tr:nth-child(even)):not(:where([class~="not-prose"] *)) {
+    background-color: var(--color-background-alt);
+  }
+
+  .legal-prose :where(ul > li):not(:where([class~="not-prose"] *))::marker {
+    color: var(--color-primary);
+  }
+
+  .legal-prose :where(ol > li):not(:where([class~="not-prose"] *))::marker {
+    color: var(--color-primary);
+  }
+
+  .legal-prose :where(blockquote):not(:where([class~="not-prose"] *)) {
+    border-left-color: var(--color-secondary);
+    background-color: var(--color-background-alt);
+    border-radius: 0 0.5rem 0.5rem 0;
+    padding: 1rem 1.25rem;
+  }
+
+  .legal-prose :where(hr):not(:where([class~="not-prose"] *)) {
+    border-color: var(--color-background-alt);
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .legal-prose :where(strong):not(:where([class~="not-prose"] *)) {
+    color: var(--color-text);
   }
 }

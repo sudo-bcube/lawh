@@ -207,7 +207,7 @@ You can use Lawh fully without granting location access.
 
 To delete your data:
 1. Uninstall the Lawh app from your device
-2. Or contact us at support@lawh.app with a deletion request
+2. Or contact us at {{CONTACT_EMAIL}} with a deletion request
 
 ### Is my data encrypted?
 
@@ -263,7 +263,7 @@ Check your notification settings:
 
 ### How do I report a bug?
 
-Contact us at support@lawh.app with:
+Contact us at {{CONTACT_EMAIL}} with:
 - Description of the issue
 - Steps to reproduce
 - Device model and OS version
@@ -348,8 +348,8 @@ Or check through your device's subscription management:
 
 ### How do I contact support?
 
-**Email:** support@lawh.app
-**Website:** https://lawh.app
+**Email:** {{CONTACT_EMAIL}}
+**Website:** {{SITE_URL}}
 
 We aim to respond within 48 hours.
 
@@ -359,8 +359,8 @@ We aim to respond within 48 hours.
 
 If your question wasn't answered here, please contact us:
 
-**Email:** support@lawh.app
-**Website:** https://lawh.app
+**Email:** {{CONTACT_EMAIL}}
+**Website:** {{SITE_URL}}
 
 We're here to help you on your Quranic journey.
 
