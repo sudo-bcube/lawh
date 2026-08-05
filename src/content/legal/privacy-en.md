@@ -38,6 +38,10 @@ When you use the App, we automatically collect:
 - Processing times for search requests
 - Error logs for troubleshooting
 
+**Approximate Location:**
+- Your IP address, from which we derive an approximate location (city, region, and country)
+- We use this to understand where the App is used and to inform which languages and recitation styles we support. We do not derive your precise location from your IP address, and we do not use it to identify you individually.
+
 ### 3.2 Information You Provide
 
 When you use our services, you may provide:
@@ -55,12 +59,11 @@ When you use our services, you may provide:
 
 With your explicit permission, we may collect:
 
-**Location Data (Optional):**
+**Precise Location Data (Optional):**
 - GPS coordinates (if you grant location permission)
-- Approximate location derived from IP address
-- City, region, and country information
+- The city, region, and country derived from those coordinates
 
-You can deny or revoke location permission at any time through your device settings. The App functions fully without location data.
+You can deny or revoke location permission at any time through your device settings. The App functions fully without precise location data. Note that approximate location derived from your IP address is collected automatically and is described in Section 3.1.
 
 ### 3.4 Information We Do NOT Collect
 
@@ -129,7 +132,7 @@ We work with trusted third-party service providers who assist in operating our A
 | Firebase | Push notifications | Device tokens, notification preferences |
 | RevenueCat | Subscription management | Device ID, subscription status |
 | Google AdMob | Advertisement delivery (free tier) | Device ID, ad interaction data |
-| ipinfo.io | Location services (optional) | IP address (if location enabled) |
+| ipinfo.io | Approximate location lookup | IP address |
 
 These providers are contractually obligated to protect your data and use it only for the services they provide to us.
 
@@ -207,7 +210,7 @@ Depending on your location, you may have the following rights:
 ### 7.4 Opt-Out
 
 - Disable push notifications through device settings
-- Deny or revoke location permissions
+- Deny or revoke precise (GPS) location permissions
 - Opt out of personalized ads (see Section 10)
 
 ### 7.5 Withdraw Consent
