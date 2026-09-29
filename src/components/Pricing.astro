@@ -1,6 +1,6 @@
 ---
-const dailyLimit = import.meta.env.PUBLIC_FREE_DAILY_LIMIT || '3';
-const monthlyLimit = import.meta.env.PUBLIC_FREE_MONTHLY_LIMIT || '30';
+const dailyLimit = import.meta.env.PUBLIC_FREE_DAILY_LIMIT || '1';
+const monthlyLimit = import.meta.env.PUBLIC_FREE_MONTHLY_LIMIT || '3';
 const monthlyPrice = import.meta.env.PUBLIC_MONTHLY_PRICE || '1';
 const yearlyPrice = import.meta.env.PUBLIC_YEARLY_PRICE || '10';
 const iosUrl = import.meta.env.PUBLIC_IOS_APP_URL || '#';
@@ -10,7 +10,7 @@ const plans = [
     name: 'Free',
     price: '$0',
     period: '',
-    features: [`${dailyLimit} searches per day`, `${monthlyLimit} searches per month`, 'Ads supported'],
+    features: [`${dailyLimit} ${dailyLimit === '1' ? 'search' : 'searches'} per day`, `${monthlyLimit} searches per month`, 'Ads supported'],
     highlighted: false
   },
   {

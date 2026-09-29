@@ -49,8 +49,8 @@ Lawh is available worldwide through the Apple App Store (iOS) and Google Play St
 ### Is Lawh free to use?
 
 Yes! Lawh offers a free tier with:
-- 3 searches per day
-- 10 searches per month
+- 1 search per day
+- 3 searches per month
 - Full access to the Quran reader
 - Ads supported
 
@@ -116,7 +116,7 @@ Longer recordings provide more context and typically yield more accurate results
 
 | Plan | Price | Benefits |
 |------|-------|----------|
-| **Free** | $0 | 3 searches/day, 10 searches/month, ads shown |
+| **Free** | $0 | 1 search/day, 3 searches/month, ads shown |
 | **Monthly Premium** | $1/month | Unlimited searches, no ads |
 | **Yearly Premium** | $10/year | Unlimited searches, no ads (17% savings) |
 

@@ -16,10 +16,10 @@
    - Monthly: $1/month (auto-renewing)
    - Yearly: $10/year (auto-renewing, 2 months free - best value)
 2. **Free tier limits (enforced in-app):**
-   - Maximum 3 searches per day
-   - Maximum 10 searches per month
+   - Maximum 1 search per day
+   - Maximum 3 searches per month
    - Shows advertisements (banner + interstitial per Story 5.1b)
-   - Clear usage counter displayed: "3/3 searches used today" or "10/10 this month"
+   - Clear usage counter displayed: "1/1 today" or "3/3 this month"
    - **Watch-to-unlock option:** When limit reached, user can watch a rewarded video ad to unlock 1 additional search (per Story 5.1b)
 3. **Paid tier benefits:**
    - Unlimited searches (no daily/monthly limits)
@@ -94,7 +94,7 @@
    - User must watch complete video (non-skippable, typically 15-30 seconds)
    - Upon completion: Grant 1 bonus search immediately
    - Bonus searches do NOT roll over (use it or lose it within that session/day)
-   - Maximum 3 bonus searches per day via rewarded ads (prevents abuse)
+   - Maximum 1 bonus search per day via rewarded ads (prevents abuse)
    - Ad unit ID configured: rewarded ad unit (separate from banner/interstitial)
    - If rewarded ad fails to load: Show "No ads available, try again later" message
 7. **Error handling:**

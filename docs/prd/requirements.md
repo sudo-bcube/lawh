@@ -20,7 +20,7 @@
 
 9. **FR9:** The system shall implement a freemium subscription model using RevenueCat SDK (wrapping Apple In-App Purchase for iOS and Google Play Billing for Android) with two paid tiers: $1/month or $10/year, unlocking unlimited searches and removing all advertisements.
 
-10. **FR10:** The system shall enforce free tier usage limits: maximum 3 searches per day and 10 searches per month. When limits are reached, the system shall display a clear message prompting upgrade to paid subscription with a direct link to the subscription screen.
+10. **FR10:** The system shall enforce free tier usage limits: maximum 1 search per day and 3 searches per month. When limits are reached, the system shall display a clear message offering a rewarded ad for 1 bonus search (maximum 1 per day) or an upgrade to paid subscription with a direct link to the subscription screen.
 
 11. **FR11:** The system shall provide a "Recent Tab" (Explore page) feature displaying the user's recently identified verses (last 20 searches) for quick return access. This feature shall be available to all users (free and paid).
 

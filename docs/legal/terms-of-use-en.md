@@ -58,10 +58,10 @@ The App uses device-based identification rather than traditional user accounts. 
 ### 4.1 Free Tier
 
 The App offers a free tier with the following limitations:
-- **3 searches per day**
-- **10 searches per month**
+- **1 search per day**
+- **3 searches per month**
 - Advertisements will be displayed (banner ads and interstitial ads)
-- Option to watch rewarded video ads for bonus searches (maximum 3 bonus searches per day)
+- Option to watch rewarded video ads for bonus searches (maximum 1 bonus search per day)
 
 ### 4.2 Premium Subscription
 
